@@ -31,11 +31,11 @@ export const milestones = [
 ];
 
 export const dataFlow = [
-  { from: "BMP585", to: "Pi Zero 2W", protocol: "I2C" },
-  { from: "MPU6050", to: "Pi Zero 2W", protocol: "I2C" },
-  { from: "GPS V3", to: "Pi Zero 2W", protocol: "UART" },
-  { from: "Pi Zero 2W", to: "ESP32", protocol: "UART" },
-  { from: "Pi Zero 2W", to: "RFM95W", protocol: "SPI" },
+  { from: "BMP585", to: "Raspberry Pi 5", protocol: "I2C" },
+  { from: "MPU6050", to: "Raspberry Pi 5", protocol: "I2C" },
+  { from: "GPS V3", to: "Raspberry Pi 5", protocol: "UART" },
+  { from: "Raspberry Pi 5", to: "ESP32", protocol: "UART" },
+  { from: "Raspberry Pi 5", to: "RFM95W", protocol: "SPI" },
   { from: "ESP32", to: "TVC Servos", protocol: "PWM" },
   { from: "RFM95W", to: "Ground Station", protocol: "915MHz" },
 ];
@@ -44,7 +44,7 @@ export const dataFlow = [
 export const teamMembers = [
   { name: "Bryan Pham",    role: "Role 1", focus: "Focus Area 1", photo: "/team/BP.jpg" },
   { name: "Isaiah Tracy",  role: "Role 2", focus: "Focus Area 2", photo:  "/team/IT.jpg"},
-  { name: "Taanish Patel", role: "Role 3", focus: "Focus Area 3", photo: "/team/TP.png" },
+  { name: "Taanish Patel", role: "Computer Systems Engineer", focus: "Focus Area 3", photo: "/team/TP.png" },
   { name: "Tariq Akilah",  role: "Role 4", focus: "Focus Area 4", photo: "/team/TA.jpg" },
 ];
 
