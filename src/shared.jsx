@@ -13,7 +13,7 @@ export const goals = [
 ];
 
 export const hardwareStack = [
-  { name: "Pi Zero 2W", role: "Flight Computer", desc: "Quad-core brain running the PID control loop, sensor fusion, and telemetry packaging", icon: "⬡" },
+  { name: "Raspberry Pi 5", role: "Flight Computer", desc: "Quad-core brain running the PID control loop, sensor fusion, and telemetry packaging", icon: "⬡" },
   { name: "ESP32", role: "Servo Controller", desc: "Dedicated MCU for real-time TVC servo actuation with deterministic timing", icon: "◈" },
   { name: "MPU6050", role: "IMU", desc: "6-axis accelerometer + gyroscope for attitude determination at 100Hz", icon: "◎" },
   { name: "BMP585", role: "Altimeter", desc: "High-precision barometric pressure sensor for altitude tracking", icon: "△" },
