@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export const TEAM_NAME = "ABG FINE SHYT";
+export const TEAM_NAME = "CC-ABGS Rocketry";
 export const PROJECT_NAME = "Fin Control System";
 export const TAGLINE = "Active thrust vector control for high-power rocketry";
 
@@ -42,10 +42,10 @@ export const dataFlow = [
 
 // photo: place image in public/team/ and set to "/team/filename.jpg" (or null for initials)
 export const teamMembers = [
-  { name: "Bryan Pham",    role: "Role 1", focus: "Focus Area 1", photo: "/team/BP.jpg" },
-  { name: "Isaiah Tracy",  role: "Role 2", focus: "Focus Area 2", photo:  "/team/IT.jpg"},
+  { name: "Bryan Pham",    role: "Design and Manufacturing Engineer", focus: "", photo: "/team/BP1.png" },
+  { name: "Isaiah Tracy",  role: "Control Systems Engineer", focus: "Focus Area 2", photo:  "/team/IT.jpg"},
   { name: "Taanish Patel", role: "Computer Systems Engineer", focus: "Focus Area 3", photo: "/team/TP.png" },
-  { name: "Tariq Akilah",  role: "Role 4", focus: "Focus Area 4", photo: "/team/TA.jpg" },
+  { name: "Tariq Akilah",  role: "Fluid Dynamics Engineer", focus: "Focus Area 4", photo: "/team/TA.jpg" },
 ];
 
 export const mono = "'JetBrains Mono', monospace";
