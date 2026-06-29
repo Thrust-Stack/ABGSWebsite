@@ -12,7 +12,7 @@ export const goals = [
   { num: "03", title: "Reproducible & Open", desc: "Document every component, every line of code, every wiring diagram so any team can build and fly this system." },
 ];
 
-export const hardwareStack = [
+export const hardwareStack = [ 
   { name: "Raspberry Pi 5", role: "Flight Computer", desc: "Quad-core brain running the PID control loop, sensor fusion, and telemetry packaging", icon: "⬡" },
   { name: "ESP32", role: "Servo Controller", desc: "Dedicated MCU for real-time TVC servo actuation with deterministic timing", icon: "◈" },
   { name: "MPU6050", role: "IMU", desc: "6-axis accelerometer + gyroscope for attitude determination at 100Hz", icon: "◎" },
@@ -41,11 +41,12 @@ export const dataFlow = [
 ];
 
 // photo: place image in public/team/ and set to "/team/filename.jpg" (or null for initials)
+// linkedin: set to full LinkedIn profile URL, e.g. "https://linkedin.com/in/username"
 export const teamMembers = [
-  { name: "Bryan Pham",    role: "Design and Manufacturing Engineer", focus: "", photo: "/team/BP1.png" },
-  { name: "Isaiah Tracy",  role: "Control Systems Engineer", focus: "Focus Area 2", photo:  "/team/IT.jpg"},
-  { name: "Taanish Patel", role: "Computer Systems Engineer", focus: "Focus Area 3", photo: "/team/TP.png" },
-  { name: "Tariq Akilah",  role: "Fluid Dynamics Engineer", focus: "Focus Area 4", photo: "/team/TA.jpg" },
+  { name: "Bryan Pham",    role: "Design and Manufacturing Engineer", focus: "CFD Simulation, Structural Design\n Aerodynamics, Airframe Design,\n & Avionics Bay Sled CAD Design", photo: "/team/BP1.png", linkedin: "https://www.linkedin.com/in/bryan-pham2028/" },
+  { name: "Isaiah Tracy",  role: "Control Systems Engineer", focus: "Canard Actuation Conrol Calculations, Radio Frequency Communications & Antenna Design", photo:  "/team/IT.jpg", linkedin: "https://www.linkedin.com/in/isaiah-tracy/" },
+  { name: "Taanish Patel", role: "Computer Systems Engineer", focus: "Avionics,Electrical & Flight Software\nElectrical,Avionics & Telemetry Systems\nElectrical & Flight Computer Systems", photo: "/team/TP.png", linkedin: "https://www.linkedin.com/in/taanish-patel/" },
+  { name: "Tariq Akilah",  role: "Fluid Dynamics Engineer", focus: "Aerodynamic Simulation, \n  Structural Design & Servo Mount CAD Design", photo: "/team/TA.jpg", linkedin: "https://www.linkedin.com/in/tariq-akilah/" },
 ];
 
 export const mono = "'JetBrains Mono', monospace";

@@ -42,19 +42,42 @@ export default function Team() {
         <SectionLabel>THE CREW</SectionLabel>
         <SectionTitle>Team</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px", marginTop: "32px" }}>
-          {teamMembers.map((m, i) => (
-            <div key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} style={{
+          {teamMembers.map((m, i) => {
+            const isHovered = hovered === i;
+            const cardStyle = {
               padding: "28px 24px", textAlign: "center",
-              background: hovered === i ? "rgba(0,255,170,0.04)" : "rgba(255,255,255,0.02)",
-              border: `1px solid ${hovered === i ? "rgba(0,255,170,0.2)" : "rgba(255,255,255,0.06)"}`,
+              background: isHovered ? "rgba(0,255,170,0.04)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${isHovered ? "rgba(0,255,170,0.2)" : "rgba(255,255,255,0.06)"}`,
               borderRadius: "8px", transition: "all 0.3s",
-            }}>
-              <Avatar member={m} hovered={hovered === i} />
-              <div style={{ fontFamily: display, fontSize: "16px", fontWeight: 600, color: "#fff", marginBottom: "10px" }}>{m.name}</div>
-              <div style={{ fontFamily: mono, fontSize: "10px", letterSpacing: "2px", color: accent, opacity: 0.6, textTransform: "uppercase", marginBottom: "10px" }}>{m.role}</div>
-              <p style={{ fontFamily: mono, fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.6, margin: 0 }}>{m.focus}</p>
-            </div>
-          ))}
+              cursor: m.linkedin ? "pointer" : "default",
+              textDecoration: "none", display: "block",
+              transform: isHovered && m.linkedin ? "translateY(-2px)" : "none",
+            };
+            const inner = (
+              <>
+                <Avatar member={m} hovered={isHovered} />
+                <div style={{ fontFamily: display, fontSize: "16px", fontWeight: 600, color: "#fff", marginBottom: "10px" }}>
+                  {m.name}
+                  {m.linkedin && (
+                    <span style={{ marginLeft: "6px", fontSize: "11px", color: accent, opacity: isHovered ? 0.9 : 0.3, transition: "opacity 0.3s" }}>↗</span>
+                  )}
+                </div>
+                <div style={{ fontFamily: mono, fontSize: "10px", letterSpacing: "2px", color: accent, opacity: 0.6, textTransform: "uppercase", marginBottom: "10px" }}>{m.role}</div>
+                <p style={{ fontFamily: mono, fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.6, margin: 0 }}>{m.focus}</p>
+              </>
+            );
+            return m.linkedin ? (
+              <a key={i} href={m.linkedin} target="_blank" rel="noopener noreferrer"
+                onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}
+                style={cardStyle}>
+                {inner}
+              </a>
+            ) : (
+              <div key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} style={cardStyle}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
