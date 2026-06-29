@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { TEAM_NAME, mono, accent, GridBackground, ScanLine, Footer } from "./shared";
 import Overview from "./pages/Overview";
 import Mission from "./pages/Mission";
@@ -61,6 +62,7 @@ export default function App() {
           <Footer />
         </div>
       </div>
+      <Analytics />
     </BrowserRouter>
   );
 }

@@ -107,22 +107,38 @@ function ProtoTag({ x, y, text, color }) {
 function Arrow({ x, y, dir = "right", color }) {
   const pts = {
     right: `${x - 6},${y - 4} ${x},${y} ${x - 6},${y + 4}`,
+    left:  `${x + 6},${y - 4} ${x},${y} ${x + 6},${y + 4}`,
     down:  `${x - 4},${y - 6} ${x},${y} ${x + 4},${y - 6}`,
+    up:    `${x - 4},${y + 6} ${x},${y} ${x + 4},${y + 6}`,
   };
   return <polygon points={pts[dir]} fill={color} fillOpacity="0.65" />;
 }
 
+function GroupLabel({ x, y, color, children, anchor = "start" }) {
+  return (
+    <text x={x} y={y} textAnchor={anchor}
+      fill={color} fontSize="9.5" fontFamily={mono} fontWeight="600" letterSpacing="2.5" fillOpacity="0.55">
+      {children}
+    </text>
+  );
+}
+
 function ArchDiagram() {
+  const powerColor = "#cc88ff";
+
   const N = {
-    bmp585:  { x: 20,  y: 40,  w: 110, h: 40 },
-    mpu6050: { x: 20,  y: 155, w: 110, h: 40 },
-    gps:     { x: 20,  y: 270, w: 110, h: 40 },
-    pi:      { x: 330, y: 145, w: 150, h: 65 },
-    esp32:   { x: 600, y: 40,  w: 114, h: 40 },
-    servos:  { x: 800, y: 40,  w: 130, h: 40 },
-    rfm95w:  { x: 600, y: 270, w: 114, h: 40 },
-    ground:  { x: 800, y: 270, w: 130, h: 40 },
-    laptop:  { x: 800, y: 368, w: 130, h: 40 },
+    bmp585:  { x: 20,  y: 55,  w: 120, h: 40 },
+    mpu6050: { x: 20,  y: 115, w: 120, h: 40 },
+    gps:     { x: 20,  y: 175, w: 120, h: 40 },
+    esp32:   { x: 290, y: 90,  w: 140, h: 60 },
+    pi:      { x: 580, y: 80,  w: 170, h: 80 },
+    rfm95w:  { x: 820, y: 100, w: 140, h: 40 },
+    ground:  { x: 820, y: 180, w: 140, h: 40 },
+    laptop:  { x: 820, y: 260, w: 140, h: 40 },
+    pca9685: { x: 290, y: 280, w: 140, h: 40 },
+    servos:  { x: 500, y: 280, w: 170, h: 40 },
+    battery: { x: 20,  y: 420, w: 120, h: 40 },
+    bec:     { x: 290, y: 420, w: 140, h: 40 },
   };
 
   const cx = n => n.x + n.w / 2;
@@ -130,72 +146,81 @@ function ArchDiagram() {
   const rx = n => n.x + n.w;
   const by = n => n.y + n.h;
 
-  const BL = 200; // left bus x
-  const BR = 560; // right bus x
+  const BL = 200; // sensor bus x
 
   return (
-    <svg viewBox="0 0 960 430" style={{ width: "100%", display: "block" }}>
+    <svg viewBox="0 0 980 500" style={{ width: "100%", display: "block" }}>
 
-      {/* ── Sensor → left bus ── */}
+      {/* ── Sensor Inputs → bus → ESP32 ── */}
       <line x1={rx(N.bmp585)}  y1={cy(N.bmp585)}  x2={BL} y2={cy(N.bmp585)}  stroke="rgba(0,255,170,0.18)" strokeWidth="1" />
       <line x1={rx(N.mpu6050)} y1={cy(N.mpu6050)} x2={BL} y2={cy(N.mpu6050)} stroke="rgba(0,255,170,0.18)" strokeWidth="1" />
       <line x1={rx(N.gps)}     y1={cy(N.gps)}     x2={BL} y2={cy(N.gps)}     stroke="rgba(0,255,170,0.18)" strokeWidth="1" />
-      {/* Left vertical bus spine */}
       <line x1={BL} y1={cy(N.bmp585)} x2={BL} y2={cy(N.gps)} stroke="rgba(0,255,170,0.1)" strokeWidth="2" />
-      {/* Junction dots on left bus */}
       <circle cx={BL} cy={cy(N.bmp585)}  r="3" fill="rgba(0,255,170,0.45)" />
       <circle cx={BL} cy={cy(N.mpu6050)} r="3" fill="rgba(0,255,170,0.45)" />
       <circle cx={BL} cy={cy(N.gps)}     r="3" fill="rgba(0,255,170,0.45)" />
-      {/* Left bus → Pi */}
-      <circle cx={BL} cy={cy(N.pi)} r="3" fill="rgba(0,255,170,0.6)" />
-      <line x1={BL} y1={cy(N.pi)} x2={N.pi.x} y2={cy(N.pi)} stroke="rgba(0,255,170,0.35)" strokeWidth="1.5" />
-      <Arrow x={N.pi.x} y={cy(N.pi)} dir="right" color={accent} />
+      <line x1={BL} y1={cy(N.esp32)} x2={N.esp32.x} y2={cy(N.esp32)} stroke="rgba(0,255,170,0.35)" strokeWidth="1.5" />
+      <Arrow x={N.esp32.x} y={cy(N.esp32)} dir="right" color={accent} />
 
-      {/* ── Pi → right bus ── */}
-      <line x1={rx(N.pi)} y1={cy(N.pi)} x2={BR} y2={cy(N.pi)} stroke="rgba(0,170,255,0.35)" strokeWidth="1.5" />
-      {/* Right vertical bus spine */}
-      <line x1={BR} y1={cy(N.esp32)} x2={BR} y2={cy(N.rfm95w)} stroke="rgba(0,170,255,0.1)" strokeWidth="2" />
-      {/* Junction dots on right bus */}
-      <circle cx={BR} cy={cy(N.pi)}    r="3" fill="rgba(0,170,255,0.6)" />
-      <circle cx={BR} cy={cy(N.esp32)} r="3" fill="rgba(0,170,255,0.45)" />
-      <circle cx={BR} cy={cy(N.rfm95w)} r="3" fill="rgba(0,170,255,0.45)" />
-      {/* Right bus → ESP32 */}
-      <line x1={BR} y1={cy(N.esp32)} x2={N.esp32.x} y2={cy(N.esp32)} stroke="rgba(0,170,255,0.2)" strokeWidth="1" />
-      <Arrow x={N.esp32.x} y={cy(N.esp32)} dir="right" color={accentBlue} />
-      {/* Right bus → RFM95W */}
-      <line x1={BR} y1={cy(N.rfm95w)} x2={N.rfm95w.x} y2={cy(N.rfm95w)} stroke="rgba(0,170,255,0.2)" strokeWidth="1" />
+      {/* ── ESP32 ↔ Raspberry Pi 5 (bidirectional) ── */}
+      <line x1={rx(N.esp32)} y1={cy(N.esp32)} x2={N.pi.x} y2={cy(N.pi)} stroke="rgba(0,170,255,0.35)" strokeWidth="1.5" />
+      <Arrow x={rx(N.esp32) + 8} y={cy(N.esp32)} dir="right" color={accentBlue} />
+      <Arrow x={N.pi.x - 8} y={cy(N.pi)} dir="left" color={accentBlue} />
+
+      {/* ── Raspberry Pi 5 → RFM95W → Ground Stn → Laptop ── */}
+      <line x1={rx(N.pi)} y1={cy(N.pi)} x2={N.rfm95w.x} y2={cy(N.rfm95w)} stroke="rgba(0,170,255,0.35)" strokeWidth="1.5" />
       <Arrow x={N.rfm95w.x} y={cy(N.rfm95w)} dir="right" color={accentBlue} />
-
-      {/* ── Output chains ── */}
-      <line x1={rx(N.esp32)} y1={cy(N.esp32)} x2={N.servos.x} y2={cy(N.servos)} stroke="rgba(255,170,0,0.3)" strokeWidth="1.5" />
-      <Arrow x={N.servos.x} y={cy(N.servos)} dir="right" color="#ffaa00" />
-      {/* Wireless link — dashed */}
-      <line x1={rx(N.rfm95w)} y1={cy(N.rfm95w)} x2={N.ground.x} y2={cy(N.ground)} stroke="rgba(255,100,68,0.35)" strokeWidth="1.5" strokeDasharray="5 3" />
-      <Arrow x={N.ground.x} y={cy(N.ground)} dir="right" color="#ff6644" />
-      {/* Ground station → Laptop */}
+      <line x1={cx(N.rfm95w)} y1={by(N.rfm95w)} x2={cx(N.ground)} y2={N.ground.y} stroke="rgba(255,100,68,0.35)" strokeWidth="1.5" strokeDasharray="5 3" />
+      <Arrow x={cx(N.ground)} y={N.ground.y} dir="down" color="#ff6644" />
       <line x1={cx(N.ground)} y1={by(N.ground)} x2={cx(N.laptop)} y2={N.laptop.y} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
       <Arrow x={cx(N.laptop)} y={N.laptop.y} dir="down" color="rgba(255,255,255,0.4)" />
+
+      {/* ── ESP32 → PCA9685 → Servos ── */}
+      <line x1={cx(N.esp32)} y1={by(N.esp32)} x2={cx(N.esp32)} y2={N.pca9685.y} stroke="rgba(255,170,0,0.3)" strokeWidth="1.5" />
+      <Arrow x={cx(N.esp32)} y={N.pca9685.y} dir="down" color="#ffaa00" />
+      <line x1={rx(N.pca9685)} y1={cy(N.pca9685)} x2={N.servos.x} y2={cy(N.servos)} stroke="rgba(255,170,0,0.3)" strokeWidth="1.5" />
+      <Arrow x={N.servos.x} y={cy(N.servos)} dir="right" color="#ffaa00" />
+
+      {/* ── Power: Battery → BEC → Raspberry Pi 5 (separate path) ── */}
+      <line x1={rx(N.battery)} y1={cy(N.battery)} x2={N.bec.x} y2={cy(N.bec)} stroke={powerColor} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
+      <Arrow x={N.bec.x} y={cy(N.bec)} dir="right" color={powerColor} />
+      <line x1={rx(N.bec)} y1={cy(N.bec)} x2={cx(N.pi)} y2={cy(N.bec)} stroke={powerColor} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
+      <line x1={cx(N.pi)} y1={cy(N.bec)} x2={cx(N.pi)} y2={by(N.pi)} stroke={powerColor} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
+      <Arrow x={cx(N.pi)} y={by(N.pi)} dir="up" color={powerColor} />
 
       {/* ── Protocol labels ── */}
       <ProtoTag x={160} y={cy(N.bmp585) - 9}  text="I2C"   color={accent} />
       <ProtoTag x={160} y={cy(N.mpu6050) - 9} text="I2C"   color={accent} />
       <ProtoTag x={160} y={cy(N.gps) - 9}     text="UART"  color={accent} />
-      <ProtoTag x={(BR + N.esp32.x) / 2}   y={cy(N.esp32)  - 9} text="UART"  color={accentBlue} />
-      <ProtoTag x={(BR + N.rfm95w.x) / 2}  y={cy(N.rfm95w) - 9} text="SPI"   color="rgba(0,170,255,0.8)" />
-      <ProtoTag x={(rx(N.esp32) + N.servos.x) / 2} y={cy(N.esp32)  - 9} text="PWM"   color="#ffaa00" />
-      <ProtoTag x={(rx(N.rfm95w) + N.ground.x) / 2} y={cy(N.rfm95w) - 9} text="915MHz" color="#ff6644" />
-      <ProtoTag x={cx(N.ground) + 30} y={(by(N.ground) + N.laptop.y) / 2} text="USB" color="rgba(255,255,255,0.4)" />
+      <ProtoTag x={(rx(N.esp32) + N.pi.x) / 2} y={cy(N.esp32) - 9} text="UART" color={accentBlue} />
+      <ProtoTag x={(rx(N.pi) + N.rfm95w.x) / 2} y={cy(N.pi) - 9} text="SPI" color={accentBlue} />
+      <ProtoTag x={cx(N.rfm95w) + 32} y={(by(N.rfm95w) + N.ground.y) / 2} text="915MHz" color="#ff6644" />
+      <ProtoTag x={cx(N.ground) + 28} y={(by(N.ground) + N.laptop.y) / 2} text="USB" color="rgba(255,255,255,0.4)" />
+      <ProtoTag x={cx(N.esp32) + 26} y={(by(N.esp32) + N.pca9685.y) / 2} text="I2C" color="#ffaa00" />
+      <ProtoTag x={(rx(N.pca9685) + N.servos.x) / 2} y={cy(N.pca9685) - 9} text="PWM ×4" color="#ffaa00" />
+      <ProtoTag x={(rx(N.battery) + N.bec.x) / 2} y={cy(N.battery) - 9} text="7.4V" color={powerColor} />
+      <ProtoTag x={cx(N.pi) + 30} y={(cy(N.bec) + by(N.pi)) / 2} text="5V" color={powerColor} />
+
+      {/* ── Section labels ── */}
+      <GroupLabel x={20}  y={32} color={accent}>SENSOR INPUTS</GroupLabel>
+      <GroupLabel x={290} y={32} color={accentBlue}>PROCESSING / CONTROL</GroupLabel>
+      <GroupLabel x={890} y={70} color={accentBlue} anchor="middle">TELEMETRY / GROUND STN</GroupLabel>
+      <GroupLabel x={360} y={267} color="#ffaa00" anchor="middle">ACTUATOR OUTPUTS</GroupLabel>
+      <GroupLabel x={205} y={407} color={powerColor} anchor="middle">POWER SYSTEM</GroupLabel>
 
       {/* ── Nodes (drawn on top of lines) ── */}
-      <ArchNode {...N.bmp585}  label="BMP585"      sub="ALTIMETER"       color={accent} />
-      <ArchNode {...N.mpu6050} label="MPU6050"     sub="IMU"             color={accent} />
-      <ArchNode {...N.gps}     label="GPS V3"      sub="POSITION"        color={accent} />
-      <ArchNode {...N.pi}      label="Pi Zero 2W"  sub="FLIGHT COMPUTER" color={accentBlue} />
-      <ArchNode {...N.esp32}   label="ESP32"        sub="SERVO CTRL"      color="#ffaa00" />
-      <ArchNode {...N.servos}  label="TVC Servos"  sub="ACTUATION"       color="rgba(255,255,255,0.4)" />
-      <ArchNode {...N.rfm95w}  label="RFM95W"      sub="915MHz RADIO"    color="#ff6644" />
-      <ArchNode {...N.ground}  label="Ground Stn"  sub="RECEIVER"        color="rgba(255,255,255,0.4)" />
-      <ArchNode {...N.laptop}  label="Laptop"      sub="DASHBOARD"       color="rgba(255,255,255,0.4)" />
+      <ArchNode {...N.bmp585}  label="BMP585"     sub="ALTIMETER"      color={accent} />
+      <ArchNode {...N.mpu6050} label="MPU6050"    sub="IMU"            color={accent} />
+      <ArchNode {...N.gps}     label="GPS V3"     sub="POSITION"       color={accent} />
+      <ArchNode {...N.esp32}   label="ESP32"      sub="SENSOR/SERVO COMM" color={accentBlue} />
+      <ArchNode {...N.pi}      label="Raspberry Pi 5" sub="FLIGHT COMPUTER" color={accentBlue} />
+      <ArchNode {...N.rfm95w}  label="RFM95W"     sub="915MHz RADIO"   color="#ff6644" />
+      <ArchNode {...N.ground}  label="Ground Stn" sub="RECEIVER"       color="rgba(255,255,255,0.4)" />
+      <ArchNode {...N.laptop}  label="Laptop"     sub="DASHBOARD"      color="rgba(255,255,255,0.4)" />
+      <ArchNode {...N.pca9685} label="PCA9685"    sub="SERVO RELAY"    color="#ffaa00" />
+      <ArchNode {...N.servos}  label="Servos ×4"  sub="BMS-127WV+"     color="#ffaa00" />
+      <ArchNode {...N.battery} label="Battery"    sub="7.4V SRC"       color={powerColor} />
+      <ArchNode {...N.bec}     label="BEC UBEC"   sub="5V STEP-DOWN"   color={powerColor} />
     </svg>
   );
 }
@@ -267,10 +292,12 @@ export default function Telemetry() {
           <SectionTitle>Data Architecture</SectionTitle>
           <p style={{
             fontFamily: mono, fontSize: "13px", color: "rgba(255,255,255,0.3)",
-            lineHeight: 1.9, margin: "0 auto 48px", maxWidth: "560px", textAlign: "center",
+            lineHeight: 1.9, margin: "0 auto 48px", maxWidth: "620px", textAlign: "center",
           }}>
-            Three sensor buses feed the Pi Zero 2W flight computer. Servo commands route to the ESP32.
-            Telemetry downlinks via 915MHz LoRa to the ground station.
+            The BMP585, MPU6050, and GPS feed sensor data into the ESP32, which exchanges telemetry
+            bidirectionally with the Raspberry Pi 5 and drives the PCA9685 to actuate the canard servos.
+            The Pi downlinks flight data via 915MHz LoRa to the ground station and laptop, while a
+            separate 7.4V→5V power rail feeds the flight computer.
           </p>
 
           <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "10px", padding: "32px 24px" }}>
@@ -282,8 +309,9 @@ export default function Telemetry() {
             {[
               { label: "I2C / UART", color: accent },
               { label: "UART / SPI", color: accentBlue },
-              { label: "PWM", color: "#ffaa00" },
+              { label: "I2C / PWM", color: "#ffaa00" },
               { label: "915MHz RF", color: "#ff6644", dashed: true },
+              { label: "Power Rail", color: "#cc88ff", dashed: true },
             ].map(({ label, color, dashed }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <svg width="28" height="10">

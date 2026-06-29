@@ -12,13 +12,16 @@ export const goals = [
   { num: "03", title: "Reproducible & Open", desc: "Document every component, every line of code, every wiring diagram so any team can build and fly this system." },
 ];
 
-export const hardwareStack = [ 
+export const hardwareStack = [
   { name: "Raspberry Pi 5", role: "Flight Computer", desc: "Quad-core brain running the PID control loop, sensor fusion, and telemetry packaging", icon: "⬡" },
-  { name: "ESP32", role: "Servo Controller", desc: "Dedicated MCU for real-time TVC servo actuation with deterministic timing", icon: "◈" },
+  { name: "ESP32", role: "Sensor Comms & Servo Control", desc: "Collects IMU, altimeter, and GPS data, relays it to the Pi, and drives the PCA9685 servo controller", icon: "◈" },
   { name: "MPU6050", role: "IMU", desc: "6-axis accelerometer + gyroscope for attitude determination at 100Hz", icon: "◎" },
   { name: "BMP585", role: "Altimeter", desc: "High-precision barometric pressure sensor for altitude tracking", icon: "△" },
   { name: "Adafruit GPS V3", role: "Position & Velocity", desc: "66-channel GPS receiver for lat/lon, ground speed, and heading", icon: "⊕" },
   { name: "RFM95W LoRa", role: "Telemetry Downlink", desc: "915MHz long-range radio transmitting live flight data to ground station", icon: "◇" },
+  { name: "PCA9685", role: "Servo Relay", desc: "16-channel I2C PWM driver translating ESP32 commands into precise servo signals", icon: "▣" },
+  { name: "BlueBird BMS-127WV+", role: "Servos (×4)", desc: "High-torque digital servos actuating the canards for active thrust vector control", icon: "✦" },
+  { name: "RC BEC UBEC", role: "5V 5A Step-Down", desc: "Switching regulator converting 7.4V battery power into a clean 5V rail for the flight computer", icon: "⚡" },
 ];
 
 export const milestones = [
@@ -31,13 +34,17 @@ export const milestones = [
 ];
 
 export const dataFlow = [
-  { from: "BMP585", to: "Raspberry Pi 5", protocol: "I2C" },
-  { from: "MPU6050", to: "Raspberry Pi 5", protocol: "I2C" },
-  { from: "GPS V3", to: "Raspberry Pi 5", protocol: "UART" },
-  { from: "Raspberry Pi 5", to: "ESP32", protocol: "UART" },
+  { from: "BMP585", to: "ESP32", protocol: "I2C" },
+  { from: "MPU6050", to: "ESP32", protocol: "I2C" },
+  { from: "GPS V3", to: "ESP32", protocol: "UART" },
+  { from: "ESP32", to: "Raspberry Pi 5", protocol: "UART" },
+  { from: "ESP32", to: "PCA9685", protocol: "I2C" },
+  { from: "PCA9685", to: "Servos", protocol: "PWM" },
   { from: "Raspberry Pi 5", to: "RFM95W", protocol: "SPI" },
-  { from: "ESP32", to: "TVC Servos", protocol: "PWM" },
   { from: "RFM95W", to: "Ground Station", protocol: "915MHz" },
+  { from: "Ground Station", to: "Laptop", protocol: "USB" },
+  { from: "Battery 7.4V", to: "BEC Step-Down", protocol: "PWR" },
+  { from: "BEC Step-Down", to: "Raspberry Pi 5", protocol: "5V PWR" },
 ];
 
 // photo: place image in public/team/ and set to "/team/filename.jpg" (or null for initials)
