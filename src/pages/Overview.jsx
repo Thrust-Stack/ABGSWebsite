@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { TEAM_NAME, TAGLINE, mono, display, accent, accentBlue, Ticker, RocketIllustration } from "../shared";
+import { PROJECT_LABEL, TAGLINE, mono, display, accent, accentBlue, Ticker, RocketIllustration } from "../shared";
 
 const sections = [
   { label: "Mission", path: "/mission", icon: "◎", desc: "Goals, mission statement, and why we build." },
@@ -22,7 +22,7 @@ export default function Overview() {
           <RocketIllustration />
           <div style={{ textAlign: "left", maxWidth: "500px" }}>
             <div style={{ fontFamily: mono, fontSize: "12px", letterSpacing: "6px", color: accent, marginBottom: "24px", textTransform: "uppercase" }}>
-              ▲ {TEAM_NAME} ▲
+              ▲ {PROJECT_LABEL} ▲
             </div>
             <h1 style={{ fontFamily: display, fontSize: "clamp(36px, 6vw, 72px)", fontWeight: 700, color: "#fff", lineHeight: 1.05, margin: "0 0 20px 0", letterSpacing: "-2px" }}>
               Active Fin<br />

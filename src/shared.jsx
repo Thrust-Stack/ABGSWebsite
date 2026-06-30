@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 
 export const TEAM_NAME = "THRUST STACK";
 export const PROJECT_NAME = "Fin Control System";
-export const TAGLINE = "Active thrust vector control for high-power rocketry \n Avionics Bay Ground Station Communnications & Canard Control";
+export const PROJECT_LABEL = "Avionics Bay Ground Station Communications & Canard Control";
+export const TAGLINE = "Active thrust vector control for high-power rocketry";
 
 export const MISSION_STATEMENT = "We're building an open-source active fin control system for high-power rocketry. Our goal is to prove that low-cost, off-the-shelf components can deliver real-time thrust vector control — making guided rocketry accessible to student teams and hobbyists everywhere.";
 
