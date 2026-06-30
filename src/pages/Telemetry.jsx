@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { dataFlow, mono, display, accent, accentBlue, SectionLabel, SectionTitle } from "../shared";
+import { dataFlow, mono, display, accent, accentBlue, SectionLabel, SectionTitle, useIsMobile } from "../shared";
 
 // ─── Telemetry simulation ───
 
@@ -149,7 +149,7 @@ function ArchDiagram() {
   const BL = 200; // sensor bus x
 
   return (
-    <svg viewBox="0 0 980 500" style={{ width: "100%", display: "block" }}>
+    <svg viewBox="0 0 980 500" style={{ width: "100%", minWidth: "800px", display: "block" }}>
 
       {/* ── Sensor Inputs → bus → ESP32 ── */}
       <line x1={rx(N.bmp585)}  y1={cy(N.bmp585)}  x2={BL} y2={cy(N.bmp585)}  stroke="rgba(0,255,170,0.18)" strokeWidth="1" />
@@ -240,10 +240,12 @@ export default function Telemetry() {
   const phaseLabels = { pre: "PRE-LAUNCH", ignition: "IGNITION", ascent: "POWERED ASCENT", coast: "COAST", descent: "DESCENT" };
   const phaseColors = { pre: "rgba(255,255,255,0.3)", ignition: "#ffaa00", ascent: accent, coast: accentBlue, descent: "#ff6644" };
 
+  const isMobile = useIsMobile();
+
   return (
     <>
       {/* Telemetry demo */}
-      <section style={{ padding: "120px 24px 60px" }}>
+      <section style={{ padding: isMobile ? "90px 16px 40px" : "120px 24px 60px" }}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
           <SectionLabel>LIVE DEMO</SectionLabel>
           <SectionTitle>Telemetry Simulation</SectionTitle>
@@ -251,7 +253,7 @@ export default function Telemetry() {
             Simulated flight data showing what the ground station receives during a launch. This is what real-time telemetry will look like on flight day.
           </p>
 
-          <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,255,170,0.15)", borderRadius: "12px", padding: "28px", position: "relative", overflow: "hidden" }}>
+          <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,255,170,0.15)", borderRadius: "12px", padding: isMobile ? "16px" : "28px", position: "relative", overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: phaseColors[telem.phase], animation: "blink 1s infinite" }} />
@@ -286,7 +288,7 @@ export default function Telemetry() {
       </section>
 
       {/* Data architecture */}
-      <section style={{ padding: "40px 24px 100px" }}>
+      <section style={{ padding: isMobile ? "24px 16px 60px" : "40px 24px 100px" }}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
           <SectionLabel>SYSTEM OVERVIEW</SectionLabel>
           <SectionTitle>Data Architecture</SectionTitle>
@@ -300,7 +302,7 @@ export default function Telemetry() {
             separate 7.4V→5V power rail feeds the flight computer.
           </p>
 
-          <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "10px", padding: "32px 24px" }}>
+          <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "10px", padding: isMobile ? "16px 12px" : "32px 24px", overflowX: "auto" }}>
             <ArchDiagram />
           </div>
 
