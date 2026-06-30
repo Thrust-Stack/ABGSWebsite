@@ -133,7 +133,7 @@ export function RocketIllustration() {
       <path d="M45 88 L26 96 L26 106 L45 110 Z" fill="rgba(0,255,170,0.04)" stroke={accent} strokeWidth="1.2" opacity="0.7" />
       <path d="M75 88 L94 96 L94 106 L75 110 Z" fill="rgba(0,255,170,0.04)" stroke={accent} strokeWidth="1.2" opacity="0.7" />
       <rect x="47" y="120" width="26" height="30" fill="rgba(0,255,170,0.08)" stroke={accent} strokeWidth="0.8" opacity="0.5" />
-      <text x="60" y="138" textAnchor="middle" fill={accent} fontSize="6" fontFamily={mono} opacity="0.6">AV BAY</text>
+      <text x="60" y="138" textAnchor="middle" fill={accent} fontSize="6" fontFamily={mono} opacity="0.6">ABGS</text>
       <path d="M45 200 L25 260 L45 240" fill="none" stroke={accent} strokeWidth="1.2" opacity="0.6" />
       <path d="M75 200 L95 260 L75 240" fill="none" stroke={accent} strokeWidth="1.2" opacity="0.6" />
       <path d="M45 200 L25 260 L45 240" fill="rgba(0,255,170,0.04)" />
