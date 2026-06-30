@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { hardwareStack, mono, display, accent, SectionLabel, SectionTitle } from "../shared";
+import { hardwareStack, mono, display, accent, SectionLabel, SectionTitle, useIsMobile } from "../shared";
 
 export default function Hardware() {
   const [hovered, setHovered] = useState(null);
+  const isMobile = useIsMobile();
   return (
-    <section style={{ padding: "120px 24px 100px" }}>
+    <section style={{ padding: isMobile ? "90px 16px 60px" : "120px 24px 100px" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         <SectionLabel>AVIONICS BAY</SectionLabel>
         <SectionTitle>Hardware Stack</SectionTitle>

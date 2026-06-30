@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
-import { TEAM_NAME, mono, accent, GridBackground, ScanLine, Footer } from "./shared";
+import { TEAM_NAME, mono, accent, GridBackground, ScanLine, Footer, useIsMobile } from "./shared";
 import Overview from "./pages/Overview";
 import Mission from "./pages/Mission";
 import Telemetry from "./pages/Telemetry";
@@ -12,33 +13,79 @@ const navLinks = ["Mission", "Telemetry", "Hardware", "Timeline", "Team"];
 
 function Nav() {
   const { pathname } = useLocation();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [menuOpen]);
+
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "20px 32px",
-      background: "linear-gradient(to bottom, rgba(8,10,14,0.95), transparent)",
-      backdropFilter: "blur(8px)",
-    }}>
-      <Link to="/" style={{ fontFamily: mono, fontSize: "13px", fontWeight: 700, letterSpacing: "3px", color: accent, textDecoration: "none" }}>
-        ▲ {TEAM_NAME}
-      </Link>
-      <div style={{ display: "flex", gap: "28px" }}>
-        {navLinks.map((label) => {
-          const path = `/${label.toLowerCase()}`;
-          const active = pathname === path;
-          return (
-            <Link key={label} to={path} style={{
-              fontFamily: mono, fontSize: "11px", letterSpacing: "2px",
-              color: active ? accent : "rgba(255,255,255,0.75)",
-              textDecoration: "none", textTransform: "uppercase", transition: "color 0.3s",
-            }}>
-              {label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: isMobile ? "16px 20px" : "20px 32px",
+        background: "linear-gradient(to bottom, rgba(8,10,14,0.95), transparent)",
+        backdropFilter: "blur(8px)",
+      }}>
+        <Link to="/" style={{ fontFamily: mono, fontSize: "13px", fontWeight: 700, letterSpacing: "3px", color: accent, textDecoration: "none" }}>
+          ▲ {TEAM_NAME}
+        </Link>
+        {isMobile ? (
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle navigation"
+            style={{ background: "none", border: "none", cursor: "pointer", fontFamily: mono, fontSize: "20px", color: menuOpen ? "rgba(255,255,255,0.4)" : accent, padding: "4px 8px", lineHeight: 1 }}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        ) : (
+          <div style={{ display: "flex", gap: "28px" }}>
+            {navLinks.map((label) => {
+              const path = `/${label.toLowerCase()}`;
+              const active = pathname === path;
+              return (
+                <Link key={label} to={path} style={{
+                  fontFamily: mono, fontSize: "11px", letterSpacing: "2px",
+                  color: active ? accent : "rgba(255,255,255,0.75)",
+                  textDecoration: "none", textTransform: "uppercase", transition: "color 0.3s",
+                }}>
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </nav>
+      {isMobile && menuOpen && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99,
+          background: "rgba(8,10,14,0.97)", backdropFilter: "blur(16px)",
+          display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+          gap: "40px",
+        }}>
+          {navLinks.map((label) => {
+            const path = `/${label.toLowerCase()}`;
+            const active = pathname === path;
+            return (
+              <Link key={label} to={path} onClick={() => setMenuOpen(false)} style={{
+                fontFamily: mono, fontSize: "15px", letterSpacing: "5px",
+                color: active ? accent : "rgba(255,255,255,0.65)",
+                textDecoration: "none", textTransform: "uppercase",
+              }}>
+                {active ? `▲ ${label}` : label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
 

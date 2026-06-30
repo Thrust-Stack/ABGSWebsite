@@ -118,8 +118,18 @@ export function SectionLabel({ children }) {
   return <div style={{ fontFamily: mono, fontSize: "11px", letterSpacing: "4px", color: accent, marginBottom: "12px" }}>{children}</div>;
 }
 
+export function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export function SectionTitle({ children }) {
-  return <h2 style={{ fontFamily: display, fontSize: "36px", fontWeight: 600, color: "#fff", margin: "0 0 16px 0" }}>{children}</h2>;
+  return <h2 style={{ fontFamily: display, fontSize: "clamp(24px, 5vw, 36px)", fontWeight: 600, color: "#fff", margin: "0 0 16px 0" }}>{children}</h2>;
 }
 
 export function RocketIllustration() {

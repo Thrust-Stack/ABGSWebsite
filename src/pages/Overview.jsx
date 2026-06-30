@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { PROJECT_LABEL, TAGLINE, mono, display, accent, accentBlue, Ticker, RocketIllustration } from "../shared";
+import { PROJECT_LABEL, TAGLINE, mono, display, accent, accentBlue, Ticker, RocketIllustration, useIsMobile } from "../shared";
 
 const sections = [
   { label: "Mission", path: "/mission", icon: "◎", desc: "Goals, mission statement, and why we build." },
@@ -12,19 +12,20 @@ const sections = [
 
 export default function Overview() {
   const [visible, setVisible] = useState(false);
+  const isMobile = useIsMobile();
   useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
 
   return (
     <>
       {/* Hero */}
       <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", padding: "40px 24px", textAlign: "center" }}>
-        <div style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)", transition: "all 1.2s cubic-bezier(0.16, 1, 0.3, 1)", display: "flex", alignItems: "center", gap: "60px", flexWrap: "wrap", justifyContent: "center" }}>
+        <div style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)", transition: "all 1.2s cubic-bezier(0.16, 1, 0.3, 1)", display: "flex", alignItems: "center", gap: isMobile ? "24px" : "60px", flexWrap: "wrap", justifyContent: "center" }}>
           <RocketIllustration />
-          <div style={{ textAlign: "left", maxWidth: "500px" }}>
-            <div style={{ fontFamily: mono, fontSize: "12px", letterSpacing: "6px", color: accent, marginBottom: "24px", textTransform: "uppercase" }}>
+          <div style={{ textAlign: isMobile ? "center" : "left", maxWidth: "500px" }}>
+            <div style={{ fontFamily: mono, fontSize: "12px", letterSpacing: isMobile ? "3px" : "6px", color: accent, marginBottom: "24px", textTransform: "uppercase" }}>
               ▲ {PROJECT_LABEL} ▲
             </div>
-            <h1 style={{ fontFamily: display, fontSize: "clamp(36px, 6vw, 72px)", fontWeight: 700, color: "#fff", lineHeight: 1.05, margin: "0 0 20px 0", letterSpacing: "-2px" }}>
+            <h1 style={{ fontFamily: display, fontSize: "clamp(32px, 6vw, 72px)", fontWeight: 700, color: "#fff", lineHeight: 1.05, margin: "0 0 20px 0", letterSpacing: "-2px" }}>
               Active Fin<br />
               <span style={{ background: "linear-gradient(135deg, #00ffaa, #00aaff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 Control System
@@ -33,7 +34,7 @@ export default function Overview() {
             <p style={{ fontFamily: mono, fontSize: "14px", color: "rgba(255,255,255,0.45)", margin: "0 0 32px", lineHeight: 1.7, letterSpacing: "0.5px" }}>
               {TAGLINE}
             </p>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-start" }}>
               <Link to="/mission" style={{ fontFamily: mono, fontSize: "13px", padding: "12px 28px", border: "1px solid rgba(0,255,170,0.4)", color: accent, borderRadius: "4px", letterSpacing: "2px", textTransform: "uppercase", background: "rgba(0,255,170,0.06)", textDecoration: "none" }}>
                 Our Mission →
               </Link>
@@ -41,7 +42,7 @@ export default function Overview() {
                 Live Demo →
               </Link>
             </div>
-            <div style={{ display: "flex", gap: "32px", alignItems: "center", marginTop: "48px" }}>
+            <div style={{ display: "flex", gap: isMobile ? "16px" : "32px", alignItems: "center", marginTop: isMobile ? "28px" : "48px", flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-start" }}>
               <Ticker />
               <span style={{ fontFamily: mono, fontSize: "11px", color: "rgba(255,255,255,0.25)", letterSpacing: "2px" }}>STATUS: DEVELOPMENT</span>
             </div>
@@ -50,7 +51,7 @@ export default function Overview() {
       </section>
 
       {/* Section cards */}
-      <section style={{ padding: "0 24px 120px" }}>
+      <section style={{ padding: isMobile ? "0 16px 80px" : "0 24px 120px" }}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
           <div style={{ fontFamily: mono, fontSize: "11px", letterSpacing: "4px", color: accent, marginBottom: "12px" }}>EXPLORE</div>
           <h2 style={{ fontFamily: display, fontSize: "28px", fontWeight: 600, color: "#fff", margin: "0 0 32px 0" }}>Project Overview</h2>

@@ -1,8 +1,9 @@
-import { MISSION_STATEMENT, goals, mono, display, accent, SectionLabel, SectionTitle } from "../shared";
+import { MISSION_STATEMENT, goals, mono, display, accent, SectionLabel, SectionTitle, useIsMobile } from "../shared";
 
 export default function Mission() {
+  const isMobile = useIsMobile();
   return (
-    <section style={{ padding: "120px 24px 100px" }}>
+    <section style={{ padding: isMobile ? "90px 16px 60px" : "120px 24px 100px" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         <SectionLabel>WHY WE BUILD</SectionLabel>
         <SectionTitle>Mission Statement</SectionTitle>
