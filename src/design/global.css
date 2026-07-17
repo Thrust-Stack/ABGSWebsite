@@ -1,0 +1,136 @@
+/* ===================================================================
+   THRUST STACK — Aerospace design system
+   Charcoal / graphite base · off-white type · metallic gray detail
+   Restrained launch-blue + ignition-orange accents · signal-green (sparingly)
+   =================================================================== */
+
+:root {
+  /* ---- Surfaces (charcoal → graphite) ---- */
+  --bg-0: #08090b;   /* page base */
+  --bg-1: #0d0f13;   /* raised */
+  --bg-2: #14171d;   /* panel */
+  --bg-3: #1b1f27;   /* elevated panel / hover */
+  --bg-glass: rgba(13, 15, 19, 0.72);
+
+  /* ---- Lines & metal ---- */
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --metal: #8b929c;        /* metallic gray detail/text */
+  --metal-dim: #565c66;
+
+  /* ---- Text ---- */
+  --text: #f3f5f7;         /* off-white */
+  --text-dim: rgba(243, 245, 247, 0.60);
+  --text-faint: rgba(243, 245, 247, 0.36);
+  --text-ghost: rgba(243, 245, 247, 0.16);
+
+  /* ---- Accents ---- */
+  --blue: #3b82f6;         /* launch blue — primary accent */
+  --blue-bright: #63a0ff;
+  --blue-dim: rgba(59, 130, 246, 0.14);
+  --orange: #ff6a2c;       /* ignition orange — heat / emphasis */
+  --orange-bright: #ff8a52;
+  --orange-dim: rgba(255, 106, 44, 0.13);
+  --green: #12e29a;        /* signal green — go/telemetry, used sparingly */
+  --green-dim: rgba(18, 226, 154, 0.12);
+
+  /* semantic aliases */
+  --accent: var(--blue);
+  --heat: var(--orange);
+  --go: var(--green);
+
+  /* ---- Type ---- */
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-heavy: cubic-bezier(0.7, 0, 0.2, 1);   /* physically-weighted */
+  --dur-fast: 160ms;
+  --dur: 280ms;
+  --dur-slow: 620ms;
+
+  /* ---- Radius / shadow / z ---- */
+  --r-sm: 4px;
+  --r: 8px;
+  --r-lg: 14px;
+  --shadow-panel: 0 20px 60px -24px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+  --z-nav: 100;
+  --z-overlay: 200;
+  --z-panel: 300;
+
+  --maxw: 1120px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* keep smooth-scroll from fighting scroll-driven 3D or reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection { background: rgba(59, 130, 246, 0.32); color: #fff; }
+
+a { color: inherit; }
+
+/* Focus visibility for keyboard nav */
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-0); }
+::-webkit-scrollbar-thumb { background: #22262e; border-radius: 6px; border: 2px solid var(--bg-0); }
+::-webkit-scrollbar-thumb:hover { background: #2c313b; }
+
+/* ---- Reusable keyframes ---- */
+@keyframes ts-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes ts-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes ts-scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+@keyframes ts-spin { to { transform: rotate(360deg); } }
+@keyframes ts-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Utility text styles ---- */
+.ts-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.ts-mono { font-family: var(--font-mono); }
+.ts-display { font-family: var(--font-display); }
+
+/* Grain/atmosphere layer helper */
+.ts-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+}

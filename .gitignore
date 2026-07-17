@@ -25,3 +25,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# CAD source files (converted to GLB in public/models via `npm run convert:cad`)
+CADFiles/
