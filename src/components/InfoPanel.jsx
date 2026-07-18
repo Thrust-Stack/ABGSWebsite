@@ -339,7 +339,7 @@ export default function InfoPanel() {
                     />
                   ))}
                   <div style={{ fontFamily: font.mono, fontSize: 9, letterSpacing: "0.12em", color: color.textGhost, marginTop: 6 }}>
-                    FLIGHT HARDWARE — BUILD IN PROGRESS
+                    FLIGHT HARDWARE / BUILD IN PROGRESS
                   </div>
                 </Row>
               )}

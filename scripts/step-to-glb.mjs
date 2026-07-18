@@ -13,7 +13,13 @@ if (!inPath || !outPath) {
 
 const occt = await occtimportjs();
 const buf = readFileSync(inPath);
-const result = occt.ReadStepFile(new Uint8Array(buf), { linearDeflection: 0.1, angularDeflection: 0.5 });
+// Deflection controls tessellation quality. The originals (0.1 / 0.5 rad ≈ 28°)
+// left curved surfaces — the nose cone especially — coarsely faceted, which
+// reads as lumps/clumps on the finished skin. Tightening the angular deflection
+// to ~0.12 rad (~7°) and halving the chordal tolerance gives far smoother
+// surfaces of revolution at a modest triangle-count increase. Re-run
+// `npm run convert:cad` after dropping the assembly STEP into CADFiles/.
+const result = occt.ReadStepFile(new Uint8Array(buf), { linearDeflection: 0.05, angularDeflection: 0.12 });
 if (!result.success) {
   console.error('occt failed to read', inPath);
   process.exit(1);

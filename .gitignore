@@ -28,3 +28,4 @@ dist-ssr
 
 # CAD source files (converted to GLB in public/models via `npm run convert:cad`)
 CADFiles/
+.gstack/

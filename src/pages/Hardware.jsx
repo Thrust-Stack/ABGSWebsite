@@ -55,7 +55,7 @@ export default function Hardware() {
           <SectionTitle>Hardware Stack</SectionTitle>
           <Lead>
             Nine off-the-shelf components, one custom sled. Every part below is also
-            explorable in 3D on the home page — scroll to the avionics sequence and pull
+            explorable in 3D on the home page. Scroll to the avionics sequence and pull
             any component out of the rocket.
           </Lead>
           <div style={{ marginTop: 22 }}>
@@ -107,7 +107,7 @@ export default function Hardware() {
             <Kicker tone="green">AS BUILT</Kicker>
             <SectionTitle style={{ fontSize: "clamp(24px, 3.5vw, 34px)" }}>The Real Sled</SectionTitle>
             <Lead>
-              The flight avionics sled under assembly — sensors and GPS forward, ESP32 and
+              The flight avionics sled under assembly. Sensors and GPS forward, ESP32 and
               Raspberry Pi 5 mid-deck, power hardware at the base, all riding inside the
               nose cone.
             </Lead>
@@ -121,8 +121,8 @@ export default function Hardware() {
             }}
           >
             {[
-              { src: "/components/IMG_9479.jpg", cap: "COMPONENT SIDE — GPS, ESP32, PI 5" },
-              { src: "/components/IMG_9480.jpg", cap: "POWER SIDE — BEC, REGULATION, TERMINALS" },
+              { src: "/components/IMG_9479.jpg", cap: "COMPONENT SIDE / GPS, ESP32, PI 5" },
+              { src: "/components/IMG_9480.jpg", cap: "POWER SIDE / BEC, REGULATION, TERMINALS" },
             ].map((p) => (
               <RevealItem key={p.src}>
                 <Panel style={{ overflow: "hidden" }}>

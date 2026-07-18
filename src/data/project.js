@@ -11,36 +11,104 @@
 export const TEAM_NAME = "THRUST STACK";
 export const PROJECT_NAME = "Fin Control System";
 export const PROJECT_LABEL = "Avionics Bay Ground Station Communications & Canard Control";
-export const TAGLINE = "Active fin control for high-power rocketry — guided flight with off-the-shelf hardware.";
+export const TAGLINE = "Active canard control for high-power rocketry, built from parts you can order online.";
 
 export const MISSION_STATEMENT =
-  "We're building an open-source active fin control system for high-power rocketry. Our goal is to prove that low-cost, off-the-shelf components can deliver real-time flight control — making guided rocketry accessible to student teams and hobbyists everywhere.";
+  "We're a four-person undergrad team building a canard control system for a high-power rocket. Four small fins near the nose, each on its own servo, deflect in flight to keep the rocket pointed where we want it. A Raspberry Pi 5 runs the control loop, an ESP32 handles the sensors, and everything downlinks to a laptop on the ground. It's all off-the-shelf hardware and our own code, and we're writing down the wiring and software so another student team can rebuild it.";
 
 export const goals = [
   {
     num: "01",
-    title: "Stable Guided Flight",
-    desc: "A controlled, canard-guided ascent with real-time attitude correction driven by a PID control loop.",
+    title: "Keep it pointed",
+    desc: "Hold the rocket on its planned attitude through powered flight. The Pi runs a PID loop on the IMU and barometer data and trims the four canards to correct pitch, yaw, and roll.",
   },
   {
     num: "02",
-    title: "Live Telemetry",
-    desc: "Full flight data — position, velocity, orientation, altitude — downlinked to a ground station in real time over 915 MHz LoRa.",
+    title: "See the flight",
+    desc: "Downlink altitude, velocity, orientation, and GPS position to a laptop over 915 MHz LoRa, fast enough to watch the flight as it happens and log every frame for later.",
   },
   {
     num: "03",
-    title: "Reproducible & Open",
-    desc: "Every component, every line of code, every wiring diagram documented so any team can build and fly this system.",
+    title: "Make it repeatable",
+    desc: "Write down the parts list, the wiring, and the code so another team can order the same hardware and get it flying without reverse-engineering our build.",
   },
 ];
 
+// Each phase carries the short line plus a fuller story: what we did, what we
+// learned, and what fought us. Phases we haven't reached yet get the plan in
+// `did` and leave `learned`/`problems` null so the page shows them as pending
+// rather than inventing a story (same rule as the pending specs below).
+//
+// `images` holds photo slots. Real build photos live in public/components; the
+// rest are marked `{ placeholder: true }` with a caption describing the shot we
+// still need to take.
 export const milestones = [
-  { phase: "01", title: "Sensor Integration", status: "active", desc: "GPS + IMU reading live on the ESP32 bridge" },
-  { phase: "02", title: "Telemetry Link", status: "upcoming", desc: "LoRa radio transmitting to the ground station" },
-  { phase: "03", title: "Flight Software", status: "upcoming", desc: "PID control loop + sensor fusion on the Pi" },
-  { phase: "04", title: "Ground Station", status: "upcoming", desc: "Real-time dashboard on a laptop" },
-  { phase: "05", title: "Static Test", status: "upcoming", desc: "Full avionics bay bench test" },
-  { phase: "06", title: "First Flight", status: "upcoming", desc: "Launch with live control telemetry" },
+  {
+    phase: "01",
+    title: "Sensor Integration",
+    status: "active",
+    desc: "Reading the IMU, barometer, and GPS live on the ESP32.",
+    did: "Wired the MPU6050 and BMP585 to the ESP32 over I2C and the Adafruit Ultimate GPS over UART, then wrote the polling loop that timestamps every sample before it goes up to the Pi. Right now all three sensors read on the bench at a steady 100 Hz.",
+    learned: "Keeping the I2C addresses straight matters more than we expected. Once we had two sensors on the same bus we had to check each address before both would enumerate, and we moved the pull-ups onto one board instead of doubling them up.",
+    problems: "The GPS took a long time to get its first fix indoors. We ended up testing next to a window and relying on the CR1220 backup cell so it keeps almanac data between power cycles instead of cold-starting every time.",
+    images: [
+      { src: "/components/IMG_9479.jpg", cap: "Component side: GPS, ESP32, and Pi 5 on the sled" },
+      { placeholder: true, cap: "Add: bench shot of the sensors reading on the serial monitor" },
+    ],
+  },
+  {
+    phase: "02",
+    title: "Telemetry Link",
+    status: "upcoming",
+    desc: "RFM95W downlinking packets to the ground station over 915 MHz.",
+    did: "Plan: bring up the RFM95W on the Pi's SPI bus and lock down a packet format for altitude, velocity, orientation, and GPS position. Bench range test first, then an open-field test to check dropouts.",
+    learned: null,
+    problems: null,
+    images: [{ placeholder: true, cap: "Add: RFM95W wired to the Pi, ground station receiver" }],
+  },
+  {
+    phase: "03",
+    title: "Flight Software",
+    status: "upcoming",
+    desc: "PID control loop and sensor fusion running on the Pi.",
+    did: "Plan: fuse the IMU, barometer, and GPS into an attitude estimate on the Pi, run the PID loop at 100 Hz, and send canard commands back down through the ESP32 to the PCA9685.",
+    learned: null,
+    problems: null,
+    images: [{ placeholder: true, cap: "Add: screen recording of the control loop tracking a test input" }],
+  },
+  {
+    phase: "04",
+    title: "Ground Station",
+    status: "upcoming",
+    desc: "Laptop dashboard plotting the downlink in real time.",
+    did: "Plan: decode the telemetry frames on a laptop and plot altitude, speed, and attitude live, plus log every frame to disk for post-flight review.",
+    learned: null,
+    problems: null,
+    images: [{ placeholder: true, cap: "Add: dashboard screenshot during a bench run" }],
+  },
+  {
+    phase: "05",
+    title: "Static Test",
+    status: "upcoming",
+    desc: "Full avionics bay powered on the bench, servos driving canards.",
+    did: "Plan: run the whole stack off the 2S pack and BEC, command all four BMS-127WV+ servos through the PCA9685, and check for voltage sag when several canards move at once.",
+    learned: null,
+    problems: null,
+    images: [
+      { src: "/components/IMG_9480.jpg", cap: "Power side: BEC, regulation, and terminals" },
+      { placeholder: true, cap: "Add: full bay powered up on the bench" },
+    ],
+  },
+  {
+    phase: "06",
+    title: "First Flight",
+    status: "upcoming",
+    desc: "Launch with the canards live and telemetry on the ground.",
+    did: "Plan: fly the vehicle with the control loop active and the ground station recording. Compare the commanded canard angles against the logged attitude to see how well it held.",
+    learned: null,
+    problems: null,
+    images: [{ placeholder: true, cap: "Add: pad photo and onboard footage from the first flight" }],
+  },
 ];
 
 export const dataFlow = [
@@ -115,7 +183,7 @@ export const components = [
     usage:
       "Runs the flight software: fuses IMU, barometer, and GPS data into a state estimate, computes canard corrections through the PID loop, and packages telemetry frames for downlink.",
     whySelected:
-      "Enough compute headroom to run sensor fusion and the control loop in real time while logging full-rate flight data — using an off-the-shelf board any team can buy.",
+      "It has enough compute headroom to run sensor fusion and the control loop in real time while logging full-rate flight data, and it's an off-the-shelf board any team can buy.",
     specs: [
       { label: "SoC", value: "Broadcom BCM2712, 4× Cortex-A76 @ 2.4 GHz", source: "datasheet" },
       { label: "RAM", value: "up to 8 GB LPDDR4X", source: "datasheet" },
@@ -136,7 +204,7 @@ export const components = [
     usage:
       "Acts as the real-time I/O bridge: polls all sensors on tight timing, streams packets up to the Pi, and translates the Pi's control outputs into servo commands via the PCA9685.",
     whySelected:
-      "Dual-core microcontroller with hardware UART/I2C and a mature toolchain — it offloads deterministic sensor polling from the Pi.",
+      "It's a dual-core microcontroller with hardware UART and I2C, so it can poll the sensors on tight timing and keep that work off the Pi.",
     specs: [
       { label: "MCU", value: "Xtensa dual-core LX6 @ 240 MHz", source: "datasheet" },
       { label: "Interfaces", value: "UART, I2C, SPI, PWM", source: "datasheet" },
@@ -154,7 +222,7 @@ export const components = [
     desc: "6-axis accelerometer + gyroscope for attitude determination at 100 Hz.",
     connectsTo: ["ESP32 (I2C)"],
     usage:
-      "Provides angular rate and acceleration for the attitude estimate — the primary input to the canard control loop during powered flight.",
+      "Provides angular rate and acceleration for the attitude estimate. It's the primary input to the canard control loop during powered flight.",
     whySelected:
       "Ubiquitous, well-documented 6-axis IMU with proven Arduino/ESP32 libraries; sufficient rate for a 100 Hz attitude loop.",
     specs: [
@@ -174,7 +242,7 @@ export const components = [
     desc: "High-precision barometric pressure sensor for altitude tracking.",
     connectsTo: ["ESP32 (I2C)"],
     usage:
-      "Tracks altitude through the whole flight profile — verification of apogee and an independent input alongside GPS altitude.",
+      "Tracks altitude through the whole flight profile. It confirms apogee and gives an independent altitude reading alongside the GPS.",
     whySelected:
       "High-resolution pressure sensing in a small package, giving fine-grained altitude data during ascent.",
     specs: [
@@ -213,7 +281,7 @@ export const components = [
     desc: "915 MHz long-range radio transmitting live flight data to the ground station.",
     connectsTo: ["Raspberry Pi 5 (SPI)", "Ground station (915 MHz RF)"],
     usage:
-      "Streams the live telemetry frames — position, velocity, orientation, altitude — from the rocket to the ground station during flight.",
+      "Streams the live telemetry frames (position, velocity, orientation, and altitude) from the rocket to the ground station during flight.",
     whySelected:
       "LoRa modulation gives kilometers of range at low power without licensing, ideal for a student telemetry downlink.",
     specs: [
@@ -234,7 +302,7 @@ export const components = [
     usage:
       "Generates clean, hardware-timed PWM for all four canard servos, decoupling servo timing from the microcontroller's workload.",
     whySelected:
-      "Dedicated PWM hardware guarantees jitter-free servo pulses — critical for smooth control surface deflection.",
+      "Dedicated PWM hardware keeps the servo pulses steady no matter how busy the ESP32 is, which keeps the canard motion smooth.",
     specs: [
       { label: "Channels", value: "16 × 12-bit PWM", source: "datasheet" },
       { label: "Interface", value: "I2C", source: "datasheet" },
@@ -253,10 +321,10 @@ export const components = [
     connectsTo: ["BEC UBEC (7.4 V)"],
     usage: "Primary energy source for the entire avionics bay through the regulated 5 V rail.",
     whySelected:
-      "A 2S pack keeps the input voltage close to the 5 V rail the stack actually needs, so the BEC runs efficiently and the servos see stable power even during simultaneous canard corrections — voltage sag under actuation load directly degrades pointing precision.",
+      "A 2S pack keeps the input voltage close to the 5 V rail the stack needs, so the BEC runs efficiently and the servos see stable power when several canards move at once. Voltage sag under that load would show up as sloppy pointing, so we oversized it.",
     specs: [
       { label: "Nominal voltage", value: "7.4 V (2S LiPo)", source: "project" },
-      { label: "Capacity", value: "≈2200 mAh — sized for pad wait + full flight with margin", source: "project" },
+      { label: "Capacity", value: "≈2200 mAh, sized for pad wait plus a full flight with margin", source: "project" },
     ],
   },
   {
@@ -297,7 +365,7 @@ export const servoSystem = {
     usage:
       "Each of the four servos drives one canard. Commands originate in the Pi's control loop, pass through the ESP32 to the PCA9685, and arrive as PWM pulses that set canard deflection.",
     whySelected:
-      "Chosen for precision of actuation at every step: as a high-voltage digital servo it holds a tight deadband, centers repeatably, and resolves the small, frequent deflection commands the 100 Hz control loop issues — so the canard angle the controller commands is the angle the airframe actually gets.",
+      "As a high-voltage digital servo it holds a tight deadband, centers repeatably, and resolves the small, frequent deflection commands the 100 Hz loop issues. That's what keeps the canard angle the controller asks for close to the angle the airframe actually gets.",
     specs: [
       { label: "Type", value: "Digital, high-voltage, coreless", source: "datasheet" },
       { label: "Command", value: "50 Hz PWM from PCA9685 (hardware-timed)", source: "project" },
@@ -328,7 +396,7 @@ export const servoSystem = {
     desc: "Airfoil-profile canards near the nose providing pitch/yaw/roll authority during powered flight.",
     connectsTo: ["Servo (via shaft + bearings)"],
     usage:
-      "Deflecting the four canards generates corrective aerodynamic moments — this is how the control loop physically steers the rocket.",
+      "Deflecting the four canards generates corrective aerodynamic moments. This is how the control loop physically steers the rocket.",
     whySelected:
       "An airfoil profile (validated in CFD) gives a predictable, near-linear lift response across the small deflection angles the controller uses, which keeps the control loop's output mapping accurate through the flight envelope.",
     specs: [
@@ -340,11 +408,11 @@ export const servoSystem = {
 
 // Rocket airframe sections — matches CAD assembly parts.
 export const airframe = [
-  { id: "nose-cone", name: "Nose Cone", desc: "3D-printed forward section that doubles as the avionics bay — the full sled (flight computer, sensors, radio, and power) rides inside it." },
+  { id: "nose-cone", name: "Nose Cone", desc: "3D-printed forward section that doubles as the avionics bay. The full sled (flight computer, sensors, radio, and power) rides inside it." },
   { id: "upper-body", name: "Upper Body Tube", desc: "Forward airframe coupler between the nose and the canard control section." },
   { id: "servo-fin-can", name: "Servo Fin Can", desc: "Structural section carrying the four servo mounts, shaft bearings, and canards." },
   { id: "lower-body", name: "Lower Body Tube", desc: "Main airframe section between the control can and the aft end." },
-  { id: "static-fin-can", name: "Static Fin Can", desc: "Fixed fins, lower bearing mount, and motor mount — passive stability at the aft end." },
+  { id: "static-fin-can", name: "Static Fin Can", desc: "Fixed fins, lower bearing mount, and motor mount. This is the passive stability at the aft end." },
 ];
 
 export const LINKS = {

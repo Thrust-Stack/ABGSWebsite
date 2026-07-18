@@ -3,8 +3,9 @@
 // phase timeline that drives the camera and the exploded view.
 import { useRef, useCallback, useEffect } from "react";
 import { motion, useScroll, useTransform, useMotionValueEvent } from "motion/react";
-import { color, font, ease, radius } from "../design/tokens";
+import { color, font, ease, radius, MAXW } from "../design/tokens";
 import { Kicker, Button, useIsMobile } from "../design/primitives";
+import { Reveal } from "../design/motion";
 import { TAGLINE, PROJECT_LABEL, MISSION_STATEMENT, components } from "../data/project";
 import { InteractionProvider, useInteraction } from "../three/interaction";
 import { useWebGLSupport, usePerfTier, usePrefersReducedMotion, useIsTouch } from "../three/hooks";
@@ -307,6 +308,87 @@ function BayControls() {
   );
 }
 
+// ------------------------------------------------------------ video outro
+
+// Placeholder video ID. Swap YT_VIDEO_ID for the team's build/flight video and
+// it drops straight into the embed below.
+const YT_VIDEO_ID = "dQw4w9WgXcQ";
+
+// A normal content section that scrolls up after the 3D tour finishes. It adds
+// the extra scroll room at the end of the track without touching the 0->1 phase
+// timeline that drives the camera and the exploded view. Rises in with the same
+// Reveal motion the rest of the site uses.
+function VideoSection() {
+  const isMobile = useIsMobile();
+  return (
+    <section
+      style={{
+        position: "relative",
+        zIndex: 2,
+        background: color.bg0,
+        borderTop: `1px solid ${color.line}`,
+        padding: isMobile ? "80px 20px 100px" : "120px 24px 150px",
+      }}
+    >
+      <div style={{ maxWidth: MAXW, margin: "0 auto" }}>
+        <Reveal>
+          <Kicker tone="orange">WATCH</Kicker>
+          <h2
+            style={{
+              fontFamily: font.display,
+              fontSize: "clamp(26px, 3.6vw, 42px)",
+              fontWeight: 600,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+              color: color.text,
+              margin: "14px 0 0",
+            }}
+          >
+            See it come together.
+          </h2>
+          <p
+            style={{
+              fontFamily: font.body,
+              fontSize: 15,
+              lineHeight: 1.7,
+              color: color.textDim,
+              maxWidth: 560,
+              margin: "16px 0 0",
+            }}
+          >
+            A walk through the build: the avionics sled, the canard control section, and where
+            the project is headed.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <div
+            style={{
+              position: "relative",
+              aspectRatio: "16 / 9",
+              marginTop: 36,
+              borderRadius: radius.lg,
+              overflow: "hidden",
+              border: `1px solid ${color.line2}`,
+              background: "#000",
+              boxShadow: "0 30px 80px -30px rgba(0,0,0,0.9)",
+            }}
+          >
+            <iframe
+              src={`https://www.youtube.com/embed/${YT_VIDEO_ID}`}
+              title="Thrust Stack project video"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            />
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 // ------------------------------------------------------------ experience
 
 function HomeExperience() {
@@ -369,6 +451,7 @@ function HomeExperience() {
   }, [reduced]);
 
   return (
+    <>
     <div ref={containerRef} style={{ position: "relative", height: `${scrollVh}vh` }}>
       {/* sticky 3D stage */}
       <div style={{ position: "sticky", top: 0, height: "100vh", overflow: "hidden", zIndex: 1 }}>
@@ -479,7 +562,7 @@ function HomeExperience() {
         {/* OVERVIEW / MISSION */}
         <Overlay phase="overview" scrollYProgress={scrollYProgress} align="right" interactive>
           <div style={{ pointerEvents: "auto", maxWidth: 460 }}>
-            <OverlayText kicker="THE MISSION" tone="blue" title="Guided rocketry, open to everyone.">
+            <OverlayText kicker="THE MISSION" tone="blue" title="What we're building.">
               {MISSION_STATEMENT}
             </OverlayText>
             <div style={{ marginTop: 22 }}>
@@ -491,10 +574,10 @@ function HomeExperience() {
         {/* CANARDS */}
         <Overlay phase="canards" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left" interactive>
           <div style={{ pointerEvents: "auto", maxWidth: 440 }}>
-            <OverlayText kicker="CANARD CONTROL" tone="orange" title="Four canards. Real-time authority.">
-              Four servo-driven canards near the nose deflect in flight to hold the rocket on
-              its planned trajectory. Each servo sits in a custom-designed mount inside the
-              forward fin can.
+            <OverlayText kicker="CANARD CONTROL" tone="orange" title="Four canards, four servos.">
+              Four canards near the nose deflect in flight to hold the rocket on its planned
+              path. Each one runs off its own BMS-127WV+ servo, sitting in a mount the team
+              designed to fit inside the forward fin can.
             </OverlayText>
             <div
               style={{
@@ -517,7 +600,7 @@ function HomeExperience() {
         {/* EXPLODE */}
         <Overlay phase="explode" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left">
           <OverlayText kicker="AIRFRAME" tone="blue" title="Five sections, one stack.">
-            Nose cone, forward airframe, servo fin can, aft airframe, and static fin can —
+            Nose cone, forward airframe, servo fin can, aft airframe, and static fin can,
             straight from the team's CAD assembly. The avionics ride in the nose.
           </OverlayText>
         </Overlay>
@@ -525,19 +608,19 @@ function HomeExperience() {
         {/* SLED OUT */}
         <Overlay phase="sledOut" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left">
           <OverlayText kicker="AVIONICS BAY" tone="green" title="The sled comes out.">
-            Every sensor, radio, and computer rides on one deck inside the nose cone — the
-            nose <em style={{ fontStyle: "normal", color: "inherit" }}>is</em> the avionics
-            bay. Boards run in a single column down the taper, power hardware on the back
-            face, and the whole bay slides out the base in one piece.
+            Every sensor, radio, and computer rides on one deck inside the nose cone. On this
+            vehicle the nose <em style={{ fontStyle: "normal", color: "inherit" }}>is</em> the
+            avionics bay. Boards run in a single column down the taper, power hardware on the
+            back face, and the whole bay slides out the base in one piece.
           </OverlayText>
         </Overlay>
 
         {/* INSPECT */}
         <Overlay phase="inspect" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left" interactive>
           <div style={{ pointerEvents: "auto", maxWidth: 400 }}>
-            <OverlayText kicker="FLIGHT HARDWARE" tone="green" title="Nine components. Zero mysteries.">
-              Select any component — on the sled or in the list — to pull it out and see
-              what it does.
+            <OverlayText kicker="FLIGHT HARDWARE" tone="green" title="Nine boards on one sled.">
+              Pick any component, on the sled or in the list, to pull it out and see what it
+              does and how it wires in.
             </OverlayText>
             {!isMobile && <ComponentLegend />}
           </div>
@@ -546,9 +629,9 @@ function HomeExperience() {
         {/* OUTRO */}
         <Overlay phase="outro" scrollYProgress={scrollYProgress} align="left" interactive>
           <div style={{ pointerEvents: "auto", maxWidth: 460 }}>
-            <OverlayText kicker="GO / NO-GO" tone="blue" title="Dig into the full project.">
-              Hardware breakdowns, live telemetry simulation, the build timeline, and the
-              team behind the vehicle.
+            <OverlayText kicker="GO / NO-GO" tone="blue" title="See the rest of the project.">
+              Hardware breakdowns, a live telemetry simulation, the build timeline, and the
+              four of us behind the vehicle.
             </OverlayText>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 26 }}>
               <Button to="/hardware">Hardware</Button>
@@ -563,6 +646,11 @@ function HomeExperience() {
       <BayControls />
       <InfoPanel />
     </div>
+
+    {/* Video section: extra scroll room at the end, a plain content block that
+        the 3D scene doesn't drive. */}
+    <VideoSection />
+    </>
   );
 }
 
@@ -606,7 +694,7 @@ function StaticHome() {
         </span>
       </h1>
       <p style={{ fontFamily: font.body, fontSize: 16, lineHeight: 1.7, color: color.textDim, maxWidth: 520, margin: "24px 0 32px" }}>
-        {TAGLINE} — {MISSION_STATEMENT}
+        {TAGLINE} {MISSION_STATEMENT}
       </p>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <Button to="/mission">Our Mission →</Button>
@@ -614,7 +702,7 @@ function StaticHome() {
         <Button to="/telemetry" variant="ghost">Telemetry</Button>
       </div>
       <p style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", color: color.textGhost, marginTop: 48 }}>
-        3D EXPERIENCE UNAVAILABLE — WEBGL NOT SUPPORTED ON THIS DEVICE
+        3D EXPERIENCE UNAVAILABLE / WEBGL NOT SUPPORTED ON THIS DEVICE
       </p>
     </section>
   );

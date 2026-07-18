@@ -8,6 +8,7 @@ import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   PHASES, SECTIONS, EXPLODE_OFFSETS, SECTION_OF_NODE, SLED,
   R, C3, CANARD_Y, MM_TO_UNIT, CAD_CENTER,
@@ -31,6 +32,18 @@ const SERVO_MM = 0.0042;
 const SLED_PIVOT_Y = -0.1;
 const _IDENT_Q = new THREE.Quaternion();
 
+// Marking-band geometry, derived from the nose cone taper so the ring always
+// hugs the skin. Seated well above the upper body tube's top so it can't fight
+// the tube it used to overlap.
+const NOSE_LEN = SECTIONS.noseCone.y1 - SECTIONS.noseCone.y0;
+const noseRadiusAt = (y) => (R * (SECTIONS.noseCone.y1 - y)) / NOSE_LEN;
+const NOSE_BAND = (() => {
+  const y = SECTIONS.noseCone.y0 + 0.6; // ~world 1.82, clear of the tube top (~1.735)
+  const h = 0.1;
+  const proud = 1.02; // ~0.6 mm off the skin so it reads as a painted/taped band
+  return { y, h, rBot: noseRadiusAt(y - h / 2) * proud, rTop: noseRadiusAt(y + h / 2) * proud };
+})();
+
 // Section materials.
 //
 // The printed parts (nose, fin cans) and the metal parts (body tubes, canards)
@@ -40,6 +53,13 @@ const _IDENT_Q = new THREE.Quaternion();
 // standing in for the sheen off the print layers. The tubes are real aluminium:
 // full metalness, low roughness, leaning on the environment for their
 // reflections.
+//
+// DoubleSide throughout: the CAD came out of OpenCascade tessellation, and a few
+// solids carry inconsistent triangle winding, which made some sections (the
+// diameter step-down aft) drop out under backface culling from certain camera
+// angles. Rendering both faces makes every section show at any orientation, and
+// it also lets the x-ray states read the interior walls instead of showing
+// through to nothing. These are closed solids, so there's no self-z-fighting.
 const printed = (color) =>
   new THREE.MeshPhysicalMaterial({
     color,
@@ -48,6 +68,7 @@ const printed = (color) =>
     clearcoat: 0.28,
     clearcoatRoughness: 0.55,
     envMapIntensity: 0.8,
+    side: THREE.DoubleSide,
   });
 
 const machined = (color, roughness = 0.28) =>
@@ -56,6 +77,7 @@ const machined = (color, roughness = 0.28) =>
     metalness: 1.0,
     roughness,
     envMapIntensity: 1.15,
+    side: THREE.DoubleSide,
   });
 
 const MATS = {
@@ -85,8 +107,20 @@ function useAssembly() {
       const rule = SECTION_OF_NODE.find((r) => norm.includes(r.key));
       if (!rule) return;
       const name = raw;
-      const geo = o.geometry.clone();
+      let geo = o.geometry.clone();
       geo.applyMatrix4(M); // bake into scene units, centered, Y up
+
+      // The nose cone came out of the STEP tessellation with only ~580 tris and
+      // faceted per-face normals, which read as clumps/lumps under the physical
+      // clearcoat. Re-smoothing the normals by crease angle welds the shared
+      // vertices and averages them across the curved skin while leaving the base
+      // rim (a ~90° edge) sharp — this fixes the shading facets. The remaining
+      // silhouette faceting is baked into the mesh; smoothing it fully needs a
+      // finer re-export (see scripts/step-to-glb.mjs + npm run convert:cad).
+      if (rule.section === "noseCone") {
+        geo = toCreasedNormals(geo, THREE.MathUtils.degToRad(50));
+      }
+
       geo.computeBoundingBox();
       const c = new THREE.Vector3();
       geo.boundingBox.getCenter(c);
@@ -319,10 +353,25 @@ export default function RocketModel({ isTouch, reduced }) {
               receiveShadow
             />
           ))}
-          {/* orange marking band at the nose base */}
-          <mesh position={[0, SECTIONS.noseCone.y0 + 0.12, 0]}>
-            <cylinderGeometry args={[R * 1.005, R * 1.02, 0.1, 48, 1, true]} />
-            <meshStandardMaterial color={C3.orange} metalness={0.55} roughness={0.4} emissiveIntensity={0} />
+          {/* Orange marking band on the lower nose. It has to clear the upper
+              body tube: the nose base telescopes concentrically inside that tube
+              (both at ~R), so a band sitting down at the base z-fought the tube
+              from some angles. Placed above the tube's top instead, sized to the
+              cone's actual radius at its station (so it hugs the skin rather than
+              floating), sat a touch proud, and polygon-offset so it never fights
+              the nose surface underneath. */}
+          <mesh position={[0, NOSE_BAND.y, 0]}>
+            <cylinderGeometry args={[NOSE_BAND.rTop, NOSE_BAND.rBot, NOSE_BAND.h, 48, 1, true]} />
+            <meshStandardMaterial
+              color={C3.orange}
+              metalness={0.55}
+              roughness={0.4}
+              emissiveIntensity={0}
+              side={THREE.DoubleSide}
+              polygonOffset
+              polygonOffsetFactor={-1}
+              polygonOffsetUnits={-1}
+            />
           </mesh>
         </InteractivePart>
 

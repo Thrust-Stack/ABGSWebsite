@@ -16,7 +16,7 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import InteractivePart from "./InteractivePart";
 import { PHASES, C3, SLED_MM } from "./config";
-import { POS, DECK_Z, DECK_T, DECK_Y0, DECK_Y1, BAY_LEN, BAY_R, deckHalf, sideSign } from "./parts/layout";
+import { POS, DECK_Z, DECK_T, DECK_Y0, DECK_Y1, BAY_LEN, deckHalf, sideSign } from "./parts/layout";
 import { HitBox } from "./parts/primitives";
 import { MM, RaspberryPi5, Esp32, Mpu6050, Bmp585, UltimateGps, Rfm95w, Pca9685, Ubec, LipoPack } from "./parts/boards";
 
@@ -106,7 +106,7 @@ export function SledDeck() {
   return (
     <group>
       <mesh geometry={deck} castShadow receiveShadow>
-        <meshPhysicalMaterial {...bayPrint} clearcoat={0.2} clearcoatRoughness={0.6} />
+        <meshPhysicalMaterial {...bayPrint} clearcoat={0.2} clearcoatRoughness={0.6} side={THREE.DoubleSide} />
       </mesh>
 
       {/* the joint ring between the two printed halves */}
@@ -115,23 +115,16 @@ export function SledDeck() {
         <meshPhysicalMaterial {...bayPrint} clearcoat={0.2} clearcoatRoughness={0.6} />
       </mesh>
 
-      {/* threaded rods tying the rings together */}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (BAY_R - 0.028), -0.16, 0]} castShadow>
-          <cylinderGeometry args={[0.004, 0.004, BAY_LEN * 0.62, 10]} />
-          <meshStandardMaterial color="#8a919b" metalness={1} roughness={0.3} />
-        </mesh>
-      ))}
-
       {/* 2200 µF bulk capacitor on the servo rail — the team's board doesn't
           carry enough local bulk for four servos stalling together, so this
-          sits across the rail. Visible in both build photos. */}
-      <group position={[0.05, -0.55, DECK_Z]}>
-        <mesh position={[0, 0, 0.045]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          sits across the rail. On the back face at the base, clear of the Pi
+          which now fills the widest part of the front deck. */}
+      <group position={[0.05, -0.56, -DECK_Z]}>
+        <mesh position={[0, 0, -0.045]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[0.029, 0.029, 0.09, 20]} />
           <meshStandardMaterial color="#0e1013" metalness={0.35} roughness={0.45} />
         </mesh>
-        <mesh position={[0, 0, 0.0905]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0, -0.0905]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.028, 0.028, 0.004, 20]} />
           <meshStandardMaterial color="#9aa1ab" metalness={0.9} roughness={0.4} />
         </mesh>

@@ -270,8 +270,9 @@ export default function Telemetry() {
             <Kicker tone="green">LIVE DEMO</Kicker>
             <SectionTitle>Telemetry Simulation</SectionTitle>
             <Lead>
-              Simulated flight data showing what the ground station receives during a
-              launch — this is what real-time telemetry will look like on flight day.
+              Simulated flight data standing in for what the ground station receives during a
+              launch. This is roughly what the real-time telemetry should look like on flight
+              day.
             </Lead>
           </Reveal>
 

@@ -112,6 +112,10 @@ export const stageFadeAt = (p) =>
 
 export const smoothstep = (t) => t * t * (3 - 2 * t);
 
+// Height of the scroll track that drives the 3D tour (progress 0..1 maps across
+// this). The YouTube video section in Home.jsx is appended *after* this track as
+// a normal content block, so it adds its own scroll room at the end without
+// remapping the phase timeline above. Bump these only to change 3D-tour pacing.
 export const SCROLL_VH_DESKTOP = 850;
 export const SCROLL_VH_MOBILE = 700;
 

@@ -49,19 +49,27 @@ export const DECK_Y1 = 0.3;
  * Packing runs narrow-forward to wide-aft, following the cone: sensors and the
  * GPS in the taper, then the ESP32, then the Pi 5 down at the base where the
  * bay is widest — the same order as IMG_9479.
+ *
+ * Positions are tuned so each board's forward corners stay inside deckHalf() at
+ * that station: at true scale the cone interior is only ~24 mm half-width where
+ * the taper narrows, so anything wide (the Pi 5, PCA9685, BEC, battery) has to
+ * ride low, and the whole stack runs as one centred column per face. Off-centre
+ * x here pushed the wider boards' corners past the deck edge, so they sit on the
+ * centreline where the trapezoid is symmetric. deckHalf(y_top) is the binding
+ * constraint for each; verified against every board's real footprint.
  */
 export const POS = {
-  // --- front: sensors, GPS, compute ---
-  mpu6050: { xy: [-0.055, 0.19], side: "front" },
-  "gps-v3": { xy: [0.045, 0.16], side: "front" },
-  bmp585: { xy: [-0.055, 0.12], side: "front" },
-  esp32: { xy: [0.02, -0.02], side: "front" },
-  "raspberry-pi-5": { xy: [0, -0.32], side: "front" },
+  // --- front: sensors, GPS, compute (forward/narrow -> aft/wide) ---
+  mpu6050: { xy: [0, 0.2], side: "front" },
+  bmp585: { xy: [0, 0.128], side: "front" },
+  "gps-v3": { xy: [0, 0.021], side: "front" },
+  esp32: { xy: [0, -0.14], side: "front" },
+  "raspberry-pi-5": { xy: [0, -0.46], side: "front" },
   // --- back: radio, actuation, power ---
-  rfm95w: { xy: [-0.04, 0.16], side: "back" },
-  pca9685: { xy: [0.035, 0.0], side: "back" },
-  "bec-ubec": { xy: [0, -0.16], side: "back" },
-  battery: { xy: [0, -0.38], side: "back" },
+  rfm95w: { xy: [0, 0.125], side: "back" },
+  pca9685: { xy: [0, -0.034], side: "back" },
+  "bec-ubec": { xy: [0, -0.189], side: "back" },
+  battery: { xy: [0, -0.361], side: "back" },
 };
 
 export const sideSign = (id) => (POS[id].side === "back" ? -1 : 1);
