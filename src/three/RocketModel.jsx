@@ -10,9 +10,10 @@ import * as THREE from "three";
 import {
   PHASES, SECTIONS, EXPLODE_OFFSETS, SLED,
   R, C3, CANARD_Y,
-  phaseT, smoothstep, stageFadeAt,
+  phaseT, smoothstep, stageFadeAt, sectionCloseAt, launchAt, outroArmed,
 } from "./config";
 import InteractivePart from "./InteractivePart";
+import MotorPlume from "./MotorPlume";
 import SledElectronics, { SledDeck, SledWiring } from "./Sled";
 import { HitBox } from "./parts/primitives";
 import { useInteraction, REST_SLED } from "./interaction";
@@ -82,6 +83,17 @@ export default function RocketModel({ isTouch, reduced }) {
     [sections.staticFinCan, sectionMats.staticFinCan]
   );
 
+  // Nozzle exit, measured off the "fake motor" solid rather than hard-coded:
+  // its bounding-box aft face is where the plume attaches and its half-width
+  // sizes it, so a re-export of the CAD moves the plume with the part. Falls
+  // back to the fin can's aft station if the motor isn't in the assembly.
+  const nozzle = useMemo(() => {
+    const motor = sections.staticFinCan.find((n) => /fake motor/i.test(n.name));
+    const bb = motor?.geo.boundingBox;
+    if (!bb) return { y: SECTIONS.staticFinCan.y0, r: R * 0.42 };
+    return { y: bb.min.y, r: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2 };
+  }, [sections.staticFinCan]);
+
   useEffect(() => {
     noseShellMats.current = sectionMats.noseCone;
     servoShellMats.current = sectionMats.servoFinCan;
@@ -97,7 +109,10 @@ export default function RocketModel({ isTouch, reduced }) {
     // ---- phase weights ----
     const outroT = phaseT(p, "outro");
     const sledReturn = smoothstep(clamp01(outroT / 0.5));
-    const sectionClose = smoothstep(clamp01((outroT - 0.45) / 0.55));
+    // Closing now finishes at outroT 0.64 (see OUTRO in config) rather than
+    // running out to the end of the phase, so the stack is a whole airframe
+    // again before the motor lights.
+    const sectionClose = sectionCloseAt(outroT);
     const explodeK = smoothstep(phaseT(p, "explode")) * (1 - sectionClose);
     const sledK = smoothstep(phaseT(p, "sledOut")) * (1 - sledReturn);
     const canT = phaseT(p, "canards");
@@ -108,6 +123,14 @@ export default function RocketModel({ isTouch, reduced }) {
       const heroW = 1 - smoothstep(clamp01(phaseT(p, "overview") * 2));
       const target = reduced ? 0 : Math.sin(t * 0.14) * 0.16 * heroW;
       rocket.current.rotation.y = THREE.MathUtils.damp(rocket.current.rotation.y, target, 3, dt);
+
+      // ---- launch ----
+      // Driven straight off scroll rather than damped: the vehicle has to leave
+      // frame on the scroll the user is doing, and an undamped value also runs
+      // exactly backwards when they scroll back up. The camera is parked at
+      // CAMERA_KEYS.outro through this, so the rocket moves through a held frame.
+      const y = outroArmed(p) ? launchAt(outroT) : 0;
+      if (rocket.current.position.y !== y) rocket.current.position.y = y;
     }
 
     // ---- explode offsets ----
@@ -331,6 +354,12 @@ export default function RocketModel({ isTouch, reduced }) {
             <mesh key={i} geometry={n.geo} material={finCanMats[i]} castShadow receiveShadow />
           ))}
         </InteractivePart>
+
+        {/* Motor ignition, outside the InteractivePart so the plume is never a
+            hover target and never picks up the per-part fade. It rides in the
+            fin can group, so it stays on the nozzle while the section is still
+            settling back into the stack. */}
+        <MotorPlume nozzleY={nozzle.y} nozzleR={nozzle.r} reduced={reduced} />
       </group>
     </group>
   );

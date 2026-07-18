@@ -112,6 +112,54 @@ export const stageFadeAt = (p) =>
 
 export const smoothstep = (t) => t * t * (3 - 2 * t);
 
+const clamp01 = (x) => Math.min(1, Math.max(0, x));
+const span = (t, a, b) => clamp01((t - a) / (b - a));
+
+// ---- outro: re-stack, ignition, launch ----
+//
+// Beat map across the outro phase (outroT 0..1). Outro is the last phase, so
+// the camera rig has no next key to blend toward and parks at
+// CAMERA_KEYS.outro for the whole phase — that locked frame is what makes a
+// launch readable, because the vehicle moves through it rather than the camera
+// moving away from the vehicle.
+//
+//   0.00-0.50  the sled slides back into the nose
+//   0.34-0.64  the stack re-closes into a whole airframe
+//   0.60-0.76  the motor lights at the static fin can's nozzle
+//   0.70-1.00  the vehicle accelerates and leaves the top of frame
+//
+// The stack has to be shut before the motor lights, which is why closing now
+// finishes at 0.64 instead of running out to the end of the phase.
+export const OUTRO = {
+  closeStart: 0.34,
+  closeEnd: 0.64,
+  igniteStart: 0.6,
+  igniteEnd: 0.76,
+  launchStart: 0.7,
+  // Scene units of +Y travel. The outro camera sits ~12 units off the vehicle
+  // at fov 42, so the frame is ~9.2 units tall about a look point at y=0.15:
+  // the top of frame is ~y=4.75 and the fin can's aft end starts at y=-3.68,
+  // so ~8.4 units clears the airframe and the rest clears the plume behind it.
+  launchDistance: 12,
+};
+
+export const sectionCloseAt = (outroT) => smoothstep(span(outroT, OUTRO.closeStart, OUTRO.closeEnd));
+
+// Motor intensity, 0 (cold) -> 1 (full throttle).
+export const igniteAt = (outroT) => smoothstep(span(outroT, OUTRO.igniteStart, OUTRO.igniteEnd));
+
+// Launch displacement in +Y. Squared rather than smoothstepped on purpose: a
+// smoothstep decelerates into its end, and the vehicle has to still be
+// accelerating when it leaves frame.
+export const launchAt = (outroT) => {
+  const t = span(outroT, OUTRO.launchStart, 1);
+  return t * t * OUTRO.launchDistance;
+};
+
+// True from just before the outro phase onward. Everything ignition-related is
+// gated on this so it costs nothing across the other 88% of the scroll.
+export const outroArmed = (p) => p > PHASES.outro.start - 0.02;
+
 // Height of the scroll track that drives the 3D tour (progress 0..1 maps across
 // this). The YouTube video section in Home.jsx is appended *after* this track as
 // a normal content block, so it adds its own scroll room at the end without
