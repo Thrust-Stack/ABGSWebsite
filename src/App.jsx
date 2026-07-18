@@ -11,6 +11,7 @@ import Footer from "./components/Footer";
 import Mission from "./pages/Mission";
 import Telemetry from "./pages/Telemetry";
 import Hardware from "./pages/Hardware";
+import Software from "./pages/Software";
 import Timeline from "./pages/Timeline";
 import Team from "./pages/Team";
 
@@ -18,7 +19,7 @@ import Team from "./pages/Team";
 // stay instant.
 const Home = lazy(() => import("./pages/Home"));
 
-const navLinks = ["Mission", "Telemetry", "Hardware", "Timeline", "Team"];
+const navLinks = ["Mission", "Telemetry", "Hardware", "Software", "Timeline", "Team"];
 
 function Wordmark({ onNavigate }) {
   return (
@@ -220,6 +221,7 @@ function AppRoutes() {
         <Route path="/mission" element={<PageTransition><Mission /></PageTransition>} />
         <Route path="/telemetry" element={<PageTransition><Telemetry /></PageTransition>} />
         <Route path="/hardware" element={<PageTransition><Hardware /></PageTransition>} />
+        <Route path="/software" element={<PageTransition><Software /></PageTransition>} />
         <Route path="/timeline" element={<PageTransition><Timeline /></PageTransition>} />
         <Route path="/team" element={<PageTransition><Team /></PageTransition>} />
       </Routes>

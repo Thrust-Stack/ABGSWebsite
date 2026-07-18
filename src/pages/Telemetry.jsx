@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { color, font, radius, MAXW } from "../design/tokens";
 import { Kicker, SectionTitle, Lead, useIsMobile } from "../design/primitives";
 import { Reveal } from "../design/motion";
+import { useWebGLSupport, usePrefersReducedMotion } from "../three/hooks";
+
+// The live servo fin-can render pulls in three/R3F; lazy-load it so the
+// Telemetry page bundle stays light and the 3D code splits into its own chunk.
+const ServoFinCanViewer = lazy(() => import("../three/ServoFinCanViewer"));
 
 // System colors for the architecture diagram
 const SENSE = color.green;
@@ -258,6 +263,8 @@ export default function Telemetry() {
   const telem = useTelemetry();
   const { altHistory, accelHistory } = telem;
   const isMobile = useIsMobile();
+  const webgl = useWebGLSupport();
+  const reduced = usePrefersReducedMotion();
 
   const phaseLabels = { pre: "PRE-LAUNCH", ignition: "IGNITION", ascent: "POWERED ASCENT", coast: "COAST", descent: "DESCENT" };
   const phaseColors = { pre: color.textFaint, ignition: color.orange, ascent: color.green, coast: color.blue, descent: color.orangeBright };
@@ -326,6 +333,31 @@ export default function Telemetry() {
                   <MiniGraph data={accelHistory} stroke={color.blue} />
                 </div>
               </div>
+
+              {/* Live canard response — the servo fin can, deflecting in real time
+                  off the same simulated gyro rates shown in the readout above. */}
+              {webgl && (
+                <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: radius.base, padding: 14, marginTop: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+                    <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.2em", color: color.textFaint }}>
+                      CANARD RESPONSE
+                    </span>
+                    <span style={{ fontFamily: font.mono, fontSize: 9, letterSpacing: "0.16em", color: color.orangeBright, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: color.orange, animation: "ts-blink 1s infinite" }} />
+                      DEFLECTION ∝ GYRO X / Y
+                    </span>
+                  </div>
+                  <Suspense
+                    fallback={
+                      <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.24em", color: color.textGhost }}>
+                        LOADING 3D…
+                      </div>
+                    }
+                  >
+                    <ServoFinCanViewer gyroX={telem.gyroX} gyroY={telem.gyroY} reduced={reduced} height={isMobile ? 240 : 320} />
+                  </Suspense>
+                </div>
+              )}
             </div>
           </Reveal>
         </div>

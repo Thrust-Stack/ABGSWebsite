@@ -1,65 +1,12 @@
 import { Suspense, lazy, useEffect, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Preload } from "@react-three/drei";
 import * as THREE from "three";
 import RocketModel from "./RocketModel";
 import RotationController from "./RotationController";
+import { Env } from "./StudioEnv";
 import { CAMERA_KEYS, PHASES, phaseT, smoothstep } from "./config";
 import { useInteraction } from "./interaction";
-
-/**
- * Procedural studio environment — no network fetches, works offline.
- *
- * This is the single most important thing in the scene for making metal look
- * like metal. A polished tube is a mirror: it doesn't show its own colour, it
- * shows the room. drei/three's stock RoomEnvironment is a deliberately uniform
- * white box, and a mirror in a uniform white box renders as flat grey — which
- * is exactly the CAD-viewport look. So instead: a dark room with a few bright
- * softboxes, which is what a product photographer would build. The tubes pick
- * up long vertical specular streaks and read as aluminium.
- */
-function studioEnv() {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#06080c");
-  const geo = new THREE.PlaneGeometry(1, 1);
-  const add = (hex, power, pos, scale) => {
-    const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-    mat.color.setHex(hex).multiplyScalar(power);
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(...pos);
-    m.scale.set(scale[0], scale[1], 1);
-    m.lookAt(0, 0, 0);
-    scene.add(m);
-  };
-  add(0xffffff, 6.0, [7, 8, 6], [7, 16]); // key softbox, tall so it streaks
-  add(0xbcd2ff, 1.1, [-9, 2, -4], [14, 14]); // broad cool fill
-  add(0x7aa7ff, 3.4, [-5, 1, -8], [1.4, 18]); // narrow rim strip
-  add(0xff8a52, 0.7, [1, -8, 3], [10, 6]); // warm kick from below
-  add(0xffffff, 0.8, [0, 13, 0], [16, 16]); // ceiling
-  return { scene, geo };
-}
-
-function Env() {
-  const { gl, scene } = useThree();
-  useEffect(() => {
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const { scene: envScene, geo } = studioEnv();
-    // Low sigma keeps the softbox edges crisp — that's what makes the streaks.
-    const tex = pmrem.fromScene(envScene, 0.015).texture;
-    scene.environment = tex;
-    // Metals reflect essentially everything, so this is the dial that decides
-    // whether the tubes read as aluminium or as blown-out white.
-    scene.environmentIntensity = 0.75;
-    return () => {
-      scene.environment = null;
-      tex.dispose();
-      pmrem.dispose();
-      geo.dispose();
-      envScene.traverse((o) => o.material?.dispose());
-    };
-  }, [gl, scene]);
-  return null;
-}
 
 // Desktop tier only — the chain is skipped entirely on weaker devices rather
 // than degraded, so mid hardware keeps its framerate instead of half an effect.

@@ -218,7 +218,7 @@ function ProgressRail({ scrollYProgress }) {
             left: 0,
             right: 0,
             height: fill,
-            background: `linear-gradient(to bottom, ${color.blue}, ${color.orange})`,
+            background: color.blue,
           }}
         />
       </div>
@@ -511,13 +511,7 @@ function HomeExperience() {
             >
               Active Fin
               <br />
-              <span
-                style={{
-                  background: `linear-gradient(120deg, ${color.blueBright}, ${color.orange})`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
+              <span style={{ color: color.blueBright }}>
                 Control System
               </span>
             </h1>
@@ -683,13 +677,7 @@ function StaticHome() {
       >
         Active Fin
         <br />
-        <span
-          style={{
-            background: `linear-gradient(120deg, ${color.blueBright}, ${color.orange})`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
+        <span style={{ color: color.blueBright }}>
           Control System
         </span>
       </h1>

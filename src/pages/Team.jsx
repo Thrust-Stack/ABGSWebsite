@@ -34,7 +34,7 @@ function MemberCard({ m }) {
           margin: "0 auto 18px",
           overflow: "hidden",
           border: `1px solid ${hover ? "rgba(59,130,246,0.5)" : color.line2}`,
-          background: `linear-gradient(135deg, ${color.blueDim}, ${color.orangeDim})`,
+          background: color.bg2,
           display: "grid",
           placeItems: "center",
           transition: "border-color 260ms",

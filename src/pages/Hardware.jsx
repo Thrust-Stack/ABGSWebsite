@@ -1,13 +1,20 @@
-import { color, font, MAXW } from "../design/tokens";
+import { useState, lazy, Suspense } from "react";
+import { color, font, radius, MAXW } from "../design/tokens";
 import { Kicker, SectionTitle, Lead, Panel, Tag, useIsMobile } from "../design/primitives";
 import { Reveal, RevealGroup, RevealItem } from "../design/motion";
 import { Button } from "../design/primitives";
+import { useWebGLSupport, usePrefersReducedMotion, useIsTouch } from "../three/hooks";
 import { components, servoSystem } from "../data/project";
+
+// The per-board 3D preview pulls in three/R3F; lazy-load it so it splits into
+// its own chunk and only downloads when a visitor opens a card's 3D view.
+const BoardViewer = lazy(() => import("../three/BoardViewer"));
 
 const TONE = { blue: color.blue, orange: color.orange, green: color.green, metal: color.metal };
 
-function ComponentCard({ c }) {
+function ComponentCard({ c, webgl, reduced, isTouch }) {
   const tone = TONE[c.tone] || color.metal;
+  const [open, setOpen] = useState(false);
   return (
     <Panel interactive style={{ padding: "26px 24px", height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -39,12 +46,71 @@ function ComponentCard({ c }) {
           <Tag key={link}>{link.split(" (")[0]}</Tag>
         ))}
       </div>
+
+      {webgl && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            style={{
+              marginTop: 16,
+              fontFamily: font.mono,
+              fontSize: 10,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: open ? color.text : color.textDim,
+              background: "rgba(255,255,255,0.02)",
+              border: `1px solid ${open ? color.line2 : color.line}`,
+              borderRadius: radius.sm,
+              padding: "8px 12px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              alignSelf: "flex-start",
+              transition: "all 200ms cubic-bezier(0.16,1,0.3,1)",
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: tone, opacity: 0.9 }} />
+            {open ? "Hide 3D ▲" : "View in 3D ▾"}
+          </button>
+
+          {open && (
+            <div
+              style={{
+                marginTop: 14,
+                border: `1px solid ${color.line}`,
+                borderRadius: radius.base,
+                overflow: "hidden",
+                background: "rgba(8,9,11,0.4)",
+              }}
+            >
+              <Suspense
+                fallback={
+                  <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.24em", color: color.textGhost }}>
+                    LOADING 3D…
+                  </div>
+                }
+              >
+                <BoardViewer id={c.id} reduced={reduced} height={240} />
+              </Suspense>
+              <div style={{ padding: "8px 12px", borderTop: `1px solid ${color.line}`, fontFamily: font.mono, fontSize: 9, letterSpacing: "0.16em", color: color.textGhost }}>
+                {isTouch ? "DRAG TO SPIN" : "DRAG TO ROTATE"} · SAME MODEL AS THE 3D SLED
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </Panel>
   );
 }
 
 export default function Hardware() {
   const isMobile = useIsMobile();
+  const webgl = useWebGLSupport();
+  const reduced = usePrefersReducedMotion();
+  const isTouch = useIsTouch();
   const systems = ["Processing / Control", "Sensing", "Communications", "Actuation", "Power"];
 
   return (
@@ -93,7 +159,7 @@ export default function Hardware() {
               >
                 {items.map((c) => (
                   <RevealItem key={c.id}>
-                    <ComponentCard c={c} />
+                    <ComponentCard c={c} webgl={webgl} reduced={reduced} isTouch={isTouch} />
                   </RevealItem>
                 ))}
               </RevealGroup>
