@@ -288,17 +288,31 @@ export default function Hardware() {
             }}
           >
             {[
-              { src: "/components/IMG_9479.jpg", cap: "COMPONENT SIDE / GPS, ESP32, PI 5" },
-              { src: "/components/IMG_9480.jpg", cap: "POWER SIDE / BEC, REGULATION, TERMINALS" },
+              { src: "/components/IMG_9755.jpg", cap: "COMPONENT SIDE / GPS, ESP32, MICROSD" },
+              { src: "/components/IMG_9754.jpg", cap: "SOLDER SIDE / POINT-TO-POINT WIRING" },
             ].map((p) => (
               <RevealItem key={p.src}>
                 <Panel style={{ overflow: "hidden" }}>
-                  <img
-                    src={p.src}
-                    alt={p.cap.toLowerCase()}
-                    loading="lazy"
-                    style={{ width: "100%", display: "block", aspectRatio: "3/4", objectFit: "cover" }}
-                  />
+                  {/* The sled photos are shot in tall portrait (roughly 1:3), so a
+                      cropping box cuts most of the board out of frame. Letterbox
+                      them instead: `contain` inside a height-capped, centred well
+                      keeps the whole board visible at a card-sized height. */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: color.bg0,
+                      padding: 10,
+                    }}
+                  >
+                    <img
+                      src={p.src}
+                      alt={p.cap.toLowerCase()}
+                      loading="lazy"
+                      style={{ width: "100%", maxHeight: 560, display: "block", objectFit: "contain" }}
+                    />
+                  </div>
                   <div style={{ padding: "12px 16px", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.16em", color: color.textFaint }}>
                     {p.cap}
                   </div>

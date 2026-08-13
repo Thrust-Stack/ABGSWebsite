@@ -52,7 +52,7 @@ export const milestones = [
     learned: "Keeping the I2C addresses straight matters more than we expected. Once we had two sensors on the same bus we had to check each address before both would enumerate, and we moved the pull-ups onto one board instead of doubling them up.",
     problems: "The GPS took a long time to get its first fix indoors. We ended up testing next to a window and relying on the CR1220 backup cell so it keeps almanac data between power cycles instead of cold-starting every time.",
     images: [
-      { src: "/components/IMG_9479.jpg", cap: "Component side: GPS, ESP32, and Pi 5 on the sled" },
+      { src: "/components/IMG_9755.jpg", cap: "Component side: ESP32, Ultimate GPS, and the microSD breakout on the sled" },
       { placeholder: true, cap: "Add: bench shot of the sensors reading on the serial monitor" },
     ],
   },
@@ -95,7 +95,7 @@ export const milestones = [
     learned: null,
     problems: null,
     images: [
-      { src: "/components/IMG_9480.jpg", cap: "Power side: BEC, regulation, and terminals" },
+      { src: "/components/IMG_9754.jpg", cap: "Solder side: point-to-point wiring and the power leads" },
       { placeholder: true, cap: "Add: full bay powered up on the bench" },
     ],
   },
@@ -172,7 +172,7 @@ export const teamMembers = [
 export const components = [
   {
     id: "raspberry-pi-5",
-    photos: ["/components/IMG_9479.jpg"],
+    photos: ["/components/IMG_9755.jpg"],
     name: "Raspberry Pi 5",
     shortName: "PI 5",
     role: "Flight Computer",
@@ -193,7 +193,7 @@ export const components = [
   },
   {
     id: "esp32",
-    photos: ["/components/IMG_9479.jpg"],
+    photos: ["/components/IMG_9755.jpg"],
     name: "ESP32",
     shortName: "ESP32",
     role: "Sensor Comms & Servo Control",
@@ -213,7 +213,7 @@ export const components = [
   },
   {
     id: "mpu6050",
-    photos: ["/components/IMG_9479.jpg"],
+    photos: ["/components/IMG_9755.jpg"],
     name: "MPU6050",
     shortName: "IMU",
     role: "Inertial Measurement Unit",
@@ -253,7 +253,7 @@ export const components = [
   },
   {
     id: "gps-v3",
-    photos: ["/components/IMG_9479.jpg"],
+    photos: ["/components/IMG_9755.jpg"],
     name: "Adafruit Ultimate GPS V3",
     shortName: "GPS",
     role: "Position & Velocity",
@@ -311,7 +311,7 @@ export const components = [
   },
   {
     id: "battery",
-    photos: ["/components/IMG_9480.jpg"],
+    photos: ["/components/IMG_9754.jpg"],
     name: "7.4V Battery",
     shortName: "BATT",
     role: "Power Source",
@@ -329,7 +329,7 @@ export const components = [
   },
   {
     id: "bec-ubec",
-    photos: ["/components/IMG_9480.jpg"],
+    photos: ["/components/IMG_9754.jpg"],
     name: "RC BEC UBEC",
     shortName: "BEC",
     role: "5V 5A Step-Down",
