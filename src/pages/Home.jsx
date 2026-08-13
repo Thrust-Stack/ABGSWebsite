@@ -312,7 +312,7 @@ function BayControls() {
 
 // Placeholder video ID. Swap YT_VIDEO_ID for the team's build/flight video and
 // it drops straight into the embed below.
-const YT_VIDEO_ID = "ffOnuUabp2o";
+const YT_VIDEO_ID = "M3sM7GVvhVc";
 
 // A normal content section that scrolls up after the 3D tour finishes. It adds
 // the extra scroll room at the end of the track without touching the 0->1 phase
