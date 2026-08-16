@@ -7,6 +7,7 @@ import { useWebGLSupport, usePrefersReducedMotion } from "../three/hooks";
 // The live servo fin-can render pulls in three/R3F; lazy-load it so the
 // Telemetry page bundle stays light and the 3D code splits into its own chunk.
 const ServoFinCanViewer = lazy(() => import("../three/ServoFinCanViewer"));
+const SimulationWindow = lazy(() => import("../components/SimulationWindow"));
 
 // System colors for the architecture diagram
 const SENSE = color.green;
@@ -281,6 +282,44 @@ export default function Telemetry() {
               launch. This is roughly what the real-time telemetry should look like on flight
               day.
             </Lead>
+          </Reveal>
+
+          <Reveal delay={0.08}>
+            <div style={{ marginTop: 40 }}>
+              <Suspense
+                fallback={
+                  <div
+                    style={{
+                      minHeight: 610,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: `1px solid ${color.line2}`,
+                      borderRadius: radius.lg,
+                      fontFamily: font.mono,
+                      fontSize: 10,
+                      letterSpacing: "0.24em",
+                      color: color.textGhost,
+                    }}
+                  >
+                    INITIALIZING FULL-BODY SIMULATION…
+                  </div>
+                }
+              >
+                <SimulationWindow webgl={webgl} reduced={reduced} />
+              </Suspense>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div style={{ marginTop: isMobile ? 56 : 78 }}>
+              <Kicker tone="orange">ACTUATOR DETAIL</Kicker>
+              <SectionTitle style={{ fontSize: "clamp(24px, 3vw, 34px)" }}>Canard subsystem loop</SectionTitle>
+              <Lead>
+                A separate close-up keeps the original servo mechanism visible while the
+                full-body window above focuses on vehicle attitude and replay controls.
+              </Lead>
+            </div>
           </Reveal>
 
           <Reveal delay={0.1}>
