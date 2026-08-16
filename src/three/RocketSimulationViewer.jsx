@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -9,6 +9,25 @@ import { createInterpolatedSample, interpolateTimeline } from "../simulation/att
 
 const CAMERA_POSITION = [6.4, 2.4, 10.6];
 const LOOK_AT = new THREE.Vector3(0, 0, 0);
+
+function useDeferredSceneEffects() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let idleId;
+    const delayId = window.setTimeout(() => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(() => setReady(true), { timeout: 900 });
+      } else {
+        setReady(true);
+      }
+    }, 180);
+    return () => {
+      window.clearTimeout(delayId);
+      if (idleId) window.cancelIdleCallback(idleId);
+    };
+  }, []);
+  return ready;
+}
 
 function CameraRig({ mode, reduced }) {
   const { camera, size } = useThree();
@@ -105,17 +124,17 @@ function FlightRocket({ timeline, playback, showAxes }) {
   );
 }
 
-function SimulationScene({ timeline, playback, cameraMode, showAxes, reduced, perfTier }) {
+function SimulationScene({ timeline, playback, cameraMode, showAxes, reduced, perfTier, effectsReady }) {
   return (
     <>
       <color attach="background" args={["#090b10"]} />
       <fog attach="fog" args={["#090b10", 11, 24]} />
-      <Env intensity={0.82} />
+      {effectsReady ? <Env intensity={0.82} /> : null}
       <ambientLight intensity={0.16} />
       <directionalLight
         position={[5, 7, 5]}
         intensity={2.1}
-        castShadow={perfTier > 0}
+        castShadow={effectsReady && perfTier > 0}
         shadow-mapSize={[perfTier > 1 ? 1536 : 768, perfTier > 1 ? 1536 : 768]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
@@ -137,7 +156,7 @@ function SimulationScene({ timeline, playback, cameraMode, showAxes, reduced, pe
         fadeStrength={1.4}
         infiniteGrid
       />
-      {perfTier > 0 ? (
+      {effectsReady && perfTier > 0 ? (
         <ContactShadows
           position={[0, -4.02, 0]}
           scale={9}
@@ -145,6 +164,7 @@ function SimulationScene({ timeline, playback, cameraMode, showAxes, reduced, pe
           blur={2.8}
           opacity={0.38}
           far={8}
+          frames={1}
         />
       ) : null}
       <CameraRig mode={cameraMode} reduced={reduced} />
@@ -169,7 +189,8 @@ export default function RocketSimulationViewer({
   reduced,
 }) {
   const perfTier = usePerfTier();
-  const dpr = perfTier > 1 ? [1, 1.75] : perfTier === 1 ? [1, 1.35] : 1;
+  const dpr = perfTier > 1 ? [1, 1.5] : perfTier === 1 ? [1, 1.25] : 1;
+  const effectsReady = useDeferredSceneEffects();
   return (
     <Canvas
       dpr={dpr}
@@ -191,6 +212,7 @@ export default function RocketSimulationViewer({
         showAxes={showAxes}
         reduced={reduced}
         perfTier={perfTier}
+        effectsReady={effectsReady}
       />
     </Canvas>
   );

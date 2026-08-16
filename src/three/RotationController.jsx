@@ -20,8 +20,7 @@
 import { useEffect, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { useInteraction, PART_INDEX } from "./interaction";
-import { dataIdOf } from "./InteractivePart";
+import { dataIdOf, useInteraction, PART_INDEX } from "./interaction";
 import { PHASES } from "./config";
 
 const DRAG_THRESH = 5; // px of movement before a press becomes a rotate

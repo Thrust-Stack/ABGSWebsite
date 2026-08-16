@@ -17,8 +17,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { C3 } from "../config";
 import { MM } from "./boards";
 import { at, pcaChannel, PIN_TOP, DECK_Z, DECK_Y0, channelX, deckHalf } from "./layout";
-import { useInteraction, PART_INDEX } from "../interaction";
-import { dataIdOf } from "../InteractivePart";
+import { dataIdOf, useInteraction, PART_INDEX } from "../interaction";
 
 // Subsystem colour code for signal runs.
 const WIRE = {

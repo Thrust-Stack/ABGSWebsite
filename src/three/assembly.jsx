@@ -67,10 +67,18 @@ export const MATS = {
   staticFinCan: () => printed(C3.nosePrint),
 };
 
+// The GLTF cache returns the same source scene to every viewer. Reuse the
+// transformed geometries as well so opening a second canvas does not clone,
+// smooth, and rebucket the entire CAD assembly again on the main thread.
+const ASSEMBLY_CACHE = new WeakMap();
+
 // Normalize + bucket the CAD nodes once per mount.
 export function useAssembly() {
   const { scene } = useGLTF("/models/rocket-assembly.glb");
   return useMemo(() => {
+    const cached = ASSEMBLY_CACHE.get(scene);
+    if (cached) return cached;
+
     const M = new THREE.Matrix4()
       .makeScale(MM_TO_UNIT, MM_TO_UNIT, MM_TO_UNIT)
       .multiply(new THREE.Matrix4().makeTranslation(-CAD_CENTER.x, -CAD_CENTER.y, -CAD_CENTER.z));
@@ -123,7 +131,9 @@ export function useAssembly() {
       return { pos, q };
     });
 
-    return { sections, canardPivots, mounts };
+    const assembly = { sections, canardPivots, mounts };
+    ASSEMBLY_CACHE.set(scene, assembly);
+    return assembly;
   }, [scene]);
 }
 

@@ -206,6 +206,16 @@ a { color: inherit; }
 /* ---- Reusable keyframes ---- */
 @keyframes ts-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 @keyframes ts-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes ts-grid-drift { to { transform: translate3d(72px, 43px, 0); } }
+
+.ts-grid-drift {
+  animation: ts-grid-drift 10s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-grid-drift { animation: none; }
+}
 @keyframes ts-scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
 @keyframes ts-spin { to { transform: rotate(360deg); } }
 @keyframes ts-fade-up {

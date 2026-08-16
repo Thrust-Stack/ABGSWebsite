@@ -5,19 +5,27 @@ import { Analytics } from "@vercel/analytics/react";
 import { color, font, ease, z } from "./design/tokens";
 import { PageTransition } from "./design/motion";
 import { useIsMobile } from "./design/primitives";
-import { TEAM_NAME } from "./data/project";
+import { PROJECT_LABEL, TAGLINE, TEAM_NAME } from "./data/project";
 import Atmosphere from "./components/Atmosphere";
 import Footer from "./components/Footer";
-import Mission from "./pages/Mission";
-import Telemetry from "./pages/Telemetry";
-import Hardware from "./pages/Hardware";
-import Software from "./pages/Software";
-import Timeline from "./pages/Timeline";
-import Team from "./pages/Team";
 
-// The 3D homepage is the heaviest route — lazy-load it so nav and sub-pages
-// stay instant.
-const Home = lazy(() => import("./pages/Home"));
+const ROUTE_LOADERS = {
+  "/": () => import("./pages/Home"),
+  "/mission": () => import("./pages/Mission"),
+  "/telemetry": () => import("./pages/Telemetry"),
+  "/hardware": () => import("./pages/Hardware"),
+  "/software": () => import("./pages/Software"),
+  "/timeline": () => import("./pages/Timeline"),
+  "/team": () => import("./pages/Team"),
+};
+
+const Home = lazy(ROUTE_LOADERS["/"]);
+const Mission = lazy(ROUTE_LOADERS["/mission"]);
+const Telemetry = lazy(ROUTE_LOADERS["/telemetry"]);
+const Hardware = lazy(ROUTE_LOADERS["/hardware"]);
+const Software = lazy(ROUTE_LOADERS["/software"]);
+const Timeline = lazy(ROUTE_LOADERS["/timeline"]);
+const Team = lazy(ROUTE_LOADERS["/team"]);
 
 const navLinks = ["Mission", "Telemetry", "Hardware", "Software", "Timeline", "Team"];
 
@@ -143,7 +151,13 @@ function Nav() {
             {navLinks.map((label) => {
               const path = `/${label.toLowerCase()}`;
               return (
-                <NavLink key={label} to={path} style={({ isActive }) => linkStyle(isActive)}>
+                <NavLink
+                  key={label}
+                  to={path}
+                  style={({ isActive }) => linkStyle(isActive)}
+                  onMouseEnter={ROUTE_LOADERS[path]}
+                  onFocus={ROUTE_LOADERS[path]}
+                >
                   {label}
                 </NavLink>
               );
@@ -209,22 +223,17 @@ function AppRoutes() {
 
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route
-          path="/"
-          element={
-            <Suspense fallback={<HomeFallback />}>
-              <Home />
-            </Suspense>
-          }
-        />
-        <Route path="/mission" element={<PageTransition><Mission /></PageTransition>} />
-        <Route path="/telemetry" element={<PageTransition><Telemetry /></PageTransition>} />
-        <Route path="/hardware" element={<PageTransition><Hardware /></PageTransition>} />
-        <Route path="/software" element={<PageTransition><Software /></PageTransition>} />
-        <Route path="/timeline" element={<PageTransition><Timeline /></PageTransition>} />
-        <Route path="/team" element={<PageTransition><Team /></PageTransition>} />
-      </Routes>
+      <Suspense fallback={isHome ? <HomeFallback /> : <PageFallback />}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Home />} />
+          <Route path="/mission" element={<PageTransition><Mission /></PageTransition>} />
+          <Route path="/telemetry" element={<PageTransition><Telemetry /></PageTransition>} />
+          <Route path="/hardware" element={<PageTransition><Hardware /></PageTransition>} />
+          <Route path="/software" element={<PageTransition><Software /></PageTransition>} />
+          <Route path="/timeline" element={<PageTransition><Timeline /></PageTransition>} />
+          <Route path="/team" element={<PageTransition><Team /></PageTransition>} />
+        </Routes>
+      </Suspense>
     </AnimatePresence>
   );
 }
@@ -236,18 +245,31 @@ function HomeFallback() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
-        gap: 18,
+        padding: "0 min(7vw, 90px)",
       }}
     >
-      <svg width="34" height="34" viewBox="0 0 34 34" style={{ animation: "ts-spin 1.6s linear infinite" }} aria-hidden>
-        <circle cx="17" cy="17" r="14" fill="none" stroke={color.line2} strokeWidth="2" />
-        <path d="M17 3 a14 14 0 0 1 14 14" fill="none" stroke={color.blue} strokeWidth="2" strokeLinecap="round" />
-      </svg>
-      <span style={{ fontFamily: font.mono, fontSize: 11, letterSpacing: "0.26em", color: color.textFaint }}>
-        INITIALIZING
+      <span style={{ fontFamily: font.mono, fontSize: 11, letterSpacing: "0.3em", color: color.textFaint }}>
+        {PROJECT_LABEL}
       </span>
+      <h1 style={{ maxWidth: 700, margin: "20px 0 0", fontFamily: font.display, fontSize: "clamp(38px, 6vw, 78px)", lineHeight: 1, letterSpacing: "-0.03em" }}>
+        Active Fin<br /><span style={{ color: color.blueBright }}>Control System</span>
+      </h1>
+      <p style={{ maxWidth: 520, margin: "24px 0 0", color: color.textDim, fontSize: 16, lineHeight: 1.7 }}>
+        {TAGLINE}
+      </p>
+      <span style={{ marginTop: 30, fontFamily: font.mono, fontSize: 10, letterSpacing: "0.2em", color: color.textGhost }}>
+        LOADING 3D FLIGHT MODEL…
+      </span>
+    </div>
+  );
+}
+
+function PageFallback() {
+  return (
+    <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.24em", color: color.textGhost }}>
+      LOADING PAGE…
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { Env } from "./StudioEnv";
+import { usePerfTier } from "./hooks";
 
 export function MiniCanvas({
   children,
@@ -17,15 +18,17 @@ export function MiniCanvas({
   autoRotate = false,
   contactShadow = true,
   groundY = -1.15,
-  dpr = [1, 2],
+  dpr,
 }) {
+  const perfTier = usePerfTier();
+  const resolvedDpr = dpr ?? (perfTier > 1 ? [1, 1.5] : perfTier === 1 ? [1, 1.25] : 1);
   return (
     <Canvas
-      dpr={dpr}
-      shadows
+      dpr={resolvedDpr}
+      shadows={perfTier > 0}
       gl={{
         alpha: true,
-        antialias: true,
+        antialias: perfTier > 0,
         powerPreference: "high-performance",
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 0.95,
@@ -40,8 +43,8 @@ export function MiniCanvas({
       <directionalLight
         position={[4, 6, 4]}
         intensity={1.5}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={perfTier > 0}
+        shadow-mapSize={[perfTier > 1 ? 1024 : 512, perfTier > 1 ? 1024 : 512]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       >
@@ -54,8 +57,16 @@ export function MiniCanvas({
 
       <Suspense fallback={null}>
         {children}
-        {contactShadow && (
-          <ContactShadows position={[0, groundY, 0]} scale={7} resolution={512} blur={2.6} opacity={0.45} far={5} />
+        {contactShadow && perfTier > 0 && (
+          <ContactShadows
+            position={[0, groundY, 0]}
+            scale={7}
+            resolution={perfTier > 1 ? 512 : 256}
+            blur={2.6}
+            opacity={0.45}
+            far={5}
+            frames={1}
+          />
         )}
       </Suspense>
 

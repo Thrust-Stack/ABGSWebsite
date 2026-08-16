@@ -3,11 +3,20 @@ import { color, font, radius, MAXW } from "../design/tokens";
 import { Kicker, SectionTitle, Lead, useIsMobile } from "../design/primitives";
 import { Reveal } from "../design/motion";
 import { useWebGLSupport, usePrefersReducedMotion } from "../three/hooks";
+import DeferredRender from "../components/DeferredRender";
 
 // The live servo fin-can render pulls in three/R3F; lazy-load it so the
 // Telemetry page bundle stays light and the 3D code splits into its own chunk.
 const ServoFinCanViewer = lazy(() => import("../three/ServoFinCanViewer"));
 const SimulationWindow = lazy(() => import("../components/SimulationWindow"));
+
+function ThreeLoadingState({ height = 300, label = "LOADING 3D…" }) {
+  return (
+    <div style={{ minHeight: height, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${color.line2}`, borderRadius: radius.lg, fontFamily: font.mono, fontSize: 10, letterSpacing: "0.24em", color: color.textGhost }}>
+      {label}
+    </div>
+  );
+}
 
 // System colors for the architecture diagram
 const SENSE = color.green;
@@ -286,28 +295,14 @@ export default function Telemetry() {
 
           <Reveal delay={0.08}>
             <div style={{ marginTop: 40 }}>
-              <Suspense
-                fallback={
-                  <div
-                    style={{
-                      minHeight: 610,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: `1px solid ${color.line2}`,
-                      borderRadius: radius.lg,
-                      fontFamily: font.mono,
-                      fontSize: 10,
-                      letterSpacing: "0.24em",
-                      color: color.textGhost,
-                    }}
-                  >
-                    INITIALIZING FULL-BODY SIMULATION…
-                  </div>
-                }
+              <DeferredRender
+                minHeight={610}
+                fallback={<ThreeLoadingState height={610} label="PREPARING FULL-BODY SIMULATION…" />}
               >
-                <SimulationWindow webgl={webgl} reduced={reduced} />
-              </Suspense>
+                <Suspense fallback={<ThreeLoadingState height={610} label="LOADING FLIGHT MODEL…" />}>
+                  <SimulationWindow webgl={webgl} reduced={reduced} />
+                </Suspense>
+              </DeferredRender>
             </div>
           </Reveal>
 
@@ -386,15 +381,15 @@ export default function Telemetry() {
                       DEFLECTION ∝ GYRO X / Y
                     </span>
                   </div>
-                  <Suspense
-                    fallback={
-                      <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.24em", color: color.textGhost }}>
-                        LOADING 3D…
-                      </div>
-                    }
+                  <DeferredRender
+                    minHeight={isMobile ? 240 : 320}
+                    rootMargin="160px 0px"
+                    fallback={<ThreeLoadingState height={isMobile ? 240 : 320} label="3D VIEW STANDBY" />}
                   >
-                    <ServoFinCanViewer gyroX={telem.gyroX} gyroY={telem.gyroY} reduced={reduced} height={isMobile ? 240 : 320} />
-                  </Suspense>
+                    <Suspense fallback={<ThreeLoadingState height={isMobile ? 240 : 320} />}>
+                      <ServoFinCanViewer gyroX={telem.gyroX} gyroY={telem.gyroY} reduced={reduced} height={isMobile ? 240 : 320} />
+                    </Suspense>
+                  </DeferredRender>
                 </div>
               )}
             </div>

@@ -5,11 +5,14 @@
 // loop needs to read every frame — scroll progress and the manual-rotation
 // targets — lives in refs so it never triggers a React render.
 import { createContext, useContext, useMemo, useState, useCallback, useRef } from "react";
-import * as THREE from "three";
 import { components, servoSystem, airframe } from "../data/project";
-import { SLED } from "./config";
+import { createQuaternionTarget, REST_SLED } from "./interactionMath";
+
+export { REST_SLED } from "./interactionMath";
 
 const InteractionCtx = createContext(null);
+
+export const dataIdOf = (instanceId) => (instanceId ? instanceId.split("#")[0] : null);
 
 // Every inspectable part, keyed by id — components, servo system, airframe.
 export const PART_INDEX = (() => {
@@ -22,11 +25,6 @@ export const PART_INDEX = (() => {
   for (const a of airframe) idx[a.id] = { kind: "airframe", tone: "metal", ...a };
   return idx;
 })();
-
-// The sled's resting presentation orientation: a gentle three-quarter view so
-// it reads dimensionally the instant it's presented. Manual rotation composes
-// on top of this, and "Reset view" returns to it.
-export const REST_SLED = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, SLED.presentYaw, 0));
 
 export function InteractionProvider({ children }) {
   const [hoveredId, setHoveredId] = useState(null);
@@ -44,9 +42,9 @@ export function InteractionProvider({ children }) {
   // Manual-rotation targets (world-space desired orientations). The sled spin
   // group and the selected part's spin group each damp toward their target
   // every frame; the RotationController writes to them from pointer drags.
-  const sledRot = useRef(new THREE.Quaternion().copy(REST_SLED));
-  const partRot = useRef(new THREE.Quaternion());
-  const partRest = useRef(new THREE.Quaternion());
+  const sledRot = useRef(createQuaternionTarget().copy(REST_SLED));
+  const partRot = useRef(createQuaternionTarget());
+  const partRest = useRef(createQuaternionTarget());
   // True from the moment a press crosses the drag threshold until the next
   // press — the click handler reads it so a rotate drag never selects.
   const dragging = useRef(false);
