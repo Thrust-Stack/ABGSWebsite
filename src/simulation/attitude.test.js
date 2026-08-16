@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
 import { buildAttitudeTimeline, findSampleWindow, mapImuRateToModel } from "./attitude.js";
-import { computeRollCommandRad } from "./flightData.js";
+import { buildModeledFlight, computeRollCommandRad } from "./flightData.js";
 
 test("maps the avionics roll axis onto the CAD longitudinal axis", () => {
   const mapped = mapImuRateToModel([0, 0, 1]);
@@ -30,4 +30,14 @@ test("finds deterministic interpolation windows", () => {
 test("roll controller output stays inside the flight clamp", () => {
   const command = computeRollCommandRad(-100, 0);
   assert.ok(Math.abs(command) <= THREE.MathUtils.degToRad(7.5));
+});
+
+test("modeled flight emphasizes roll without increasing its tilt rates", () => {
+  const samples = buildModeledFlight().samples;
+  const maxRollRate = Math.max(...samples.map((sample) => Math.abs(sample.gyroRadS[2])));
+  const maxTiltRate = Math.max(
+    ...samples.map((sample) => Math.hypot(sample.gyroRadS[0], sample.gyroRadS[1]))
+  );
+  assert.ok(maxRollRate > 0.55);
+  assert.ok(maxTiltRate < 0.08);
 });

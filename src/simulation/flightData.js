@@ -6,6 +6,7 @@ const MAX_FIN_DEFLECTION_DEG = 7.5;
 const KP = 0.0025;
 const CANARD_ACCELERATION_COEFFICIENT = 0.0243;
 const MIN_VERTICAL_VELOCITY_M_S = 0.1;
+const MODELED_ROLL_VISIBILITY_GAIN = 1.35;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const smoothstep = (value) => {
@@ -85,6 +86,10 @@ function modeledSample(t, index) {
     gyroZ += Math.sin(t * 0.5) * 0.018;
   }
 
+  // Make longitudinal rotation easier to read on the full-body model without
+  // changing the pitch/yaw rates that determine the vehicle's tilt.
+  gyroZ *= MODELED_ROLL_VISIBILITY_GAIN;
+
   return {
     t,
     phase,
@@ -111,30 +116,5 @@ export function buildModeledFlight() {
     badge: "MODELED FLIGHT",
     description: "Deterministic flight profile using the current roll-control law.",
     samples,
-  };
-}
-
-export function normalizeBenchReplay(payload) {
-  let previousAltitude = 0;
-  const samples = payload.samples.map((sample) => {
-    const altitudeM = sample.altitudeM ?? previousAltitude;
-    const verticalVelocityMps =
-      sample.t > 0 ? (altitudeM - previousAltitude) / SAMPLE_INTERVAL : 0;
-    previousAltitude = altitudeM;
-    return {
-      ...sample,
-      phase: "bench",
-      altitudeM,
-      verticalVelocityMps,
-      rollCommandRad: computeRollCommandRad(sample.gyroRadS[2], 0),
-    };
-  });
-  return {
-    id: "bench",
-    label: "Bench replay",
-    badge: "BENCH REPLAY",
-    description: "Curated 20 Hz IMU window from the recorded avionics bench log.",
-    samples,
-    meta: payload.meta,
   };
 }

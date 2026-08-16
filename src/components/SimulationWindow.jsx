@@ -1,7 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import * as THREE from "three";
-import benchReplay from "../simulation/data/bench-replay.json";
-import { buildModeledFlight, normalizeBenchReplay } from "../simulation/flightData";
+import { buildModeledFlight } from "../simulation/flightData";
 import {
   buildAttitudeTimeline,
   createInterpolatedSample,
@@ -12,19 +11,14 @@ import RocketSimulationViewer from "../three/RocketSimulationViewer";
 import { color } from "../design/tokens";
 
 const MODELED = buildModeledFlight();
-const BENCH = normalizeBenchReplay(benchReplay);
-const SOURCES = [MODELED, BENCH].map((source) => ({
-  ...source,
-  timeline: buildAttitudeTimeline(source.samples),
-}));
-const SOURCE_BY_ID = new Map(SOURCES.map((source) => [source.id, source]));
+const TIMELINE = buildAttitudeTimeline(MODELED.samples);
+const DURATION = TIMELINE.at(-1)?.t || 0;
 const PHASE_LABELS = {
   pre: "PRE-LAUNCH",
   ignition: "IGNITION",
   ascent: "POWERED ASCENT",
   coast: "COAST",
   descent: "DESCENT",
-  bench: "BENCH MOTION",
 };
 
 const rollRateDeg = (sample) => THREE.MathUtils.radToDeg(sample.gyroRadS[2]);
@@ -90,16 +84,12 @@ function WebGLFallback() {
 }
 
 export default function SimulationWindow({ webgl, reduced = false }) {
-  const [sourceId, setSourceId] = useState("modeled");
   const [cameraMode, setCameraMode] = useState("studio");
   const [showAxes, setShowAxes] = useState(false);
-  const source = SOURCE_BY_ID.get(sourceId) || MODELED;
-  const timeline = source.timeline || buildAttitudeTimeline(source.samples);
-  const duration = timeline.at(-1)?.t || 0;
-  const playback = usePlayback(duration, reduced);
+  const playback = usePlayback(DURATION, reduced);
   const readout = useMemo(() => {
     const sample = createInterpolatedSample();
-    interpolateTimeline(timeline, playback.displayTime, sample);
+    interpolateTimeline(TIMELINE, playback.displayTime, sample);
     const euler = new THREE.Euler().setFromQuaternion(sample.orientation, "YXZ");
     return {
       ...sample,
@@ -107,18 +97,18 @@ export default function SimulationWindow({ webgl, reduced = false }) {
       rollDeg: THREE.MathUtils.radToDeg(euler.y),
       yawDeg: THREE.MathUtils.radToDeg(euler.z),
     };
-  }, [timeline, playback.displayTime]);
-  const progress = duration > 0 ? playback.displayTime / duration : 0;
+  }, [playback.displayTime]);
+  const progress = DURATION > 0 ? playback.displayTime / DURATION : 0;
 
   return (
     <div className="sim-window">
       <header className="sim-header">
         <div>
           <span className="sim-live-dot" />
-          <strong>{source.badge}</strong>
+          <strong>{MODELED.badge}</strong>
           <span>{PHASE_LABELS[readout.phase] || readout.phase}</span>
         </div>
-        <span>T+{format(playback.displayTime, 1)}s / {format(duration, 1)}s</span>
+        <span>T+{format(playback.displayTime, 1)}s / {format(DURATION, 1)}s</span>
       </header>
 
       <div className="sim-layout">
@@ -130,7 +120,7 @@ export default function SimulationWindow({ webgl, reduced = false }) {
             <Metric label="Yaw" value={format(readout.yawDeg)} unit="°" tone={color.green} />
           </div>
           <TelemetryPlot
-            samples={timeline}
+            samples={TIMELINE}
             accessor={rollRateDeg}
             label="ROLL RATE"
             unit="°/s"
@@ -138,7 +128,7 @@ export default function SimulationWindow({ webgl, reduced = false }) {
             playhead={progress}
           />
           <TelemetryPlot
-            samples={timeline}
+            samples={TIMELINE}
             accessor={altitude}
             label="ALTITUDE"
             unit="m"
@@ -150,7 +140,7 @@ export default function SimulationWindow({ webgl, reduced = false }) {
         <main className="sim-viewport" aria-label="Full-body rocket attitude simulation">
           {webgl ? (
             <RocketSimulationViewer
-              timeline={timeline}
+              timeline={TIMELINE}
               playback={playback}
               cameraMode={cameraMode}
               showAxes={showAxes}
@@ -163,23 +153,8 @@ export default function SimulationWindow({ webgl, reduced = false }) {
         </main>
 
         <aside className="sim-rail sim-rail-right" aria-label="Simulation controls">
-          <div className="sim-section-label">DATA SOURCE</div>
-          <div className="sim-source-tabs">
-            {SOURCES.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                className={sourceId === item.id ? "active" : ""}
-                onClick={() => {
-                  playback.seek(0);
-                  setSourceId(item.id);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <p className="sim-source-note">{source.description}</p>
+          <div className="sim-section-label">SIMULATION MODEL</div>
+          <p className="sim-source-note">{MODELED.description}</p>
           <div className="sim-section-label">LIVE VALUES</div>
           <div className="sim-live-values">
             <Metric label="Roll rate" value={format(THREE.MathUtils.radToDeg(readout.gyroRadS[2]), 2)} unit="°/s" />
@@ -207,7 +182,7 @@ export default function SimulationWindow({ webgl, reduced = false }) {
           <input
             type="range"
             min="0"
-            max={duration}
+            max={DURATION}
             step="0.01"
             value={playback.displayTime}
             onChange={(event) => playback.seek(event.target.value)}
