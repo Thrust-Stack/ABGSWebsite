@@ -75,8 +75,8 @@ export function MiniCanvas({
 
 /**
  * Measures its children's bounding box once and normalizes them to a consistent
- * on-screen size, centered at the origin. This is what lets an MPU6050 and a
- * Raspberry Pi 5 — wildly different real sizes — both arrive readable, the same
+ * on-screen size, centered at the origin. This is what lets an MPU6500 and a
+ * LiPo pack — wildly different real sizes — both arrive readable, the same
  * intent as InteractivePart's per-board `inspect` factors, done automatically.
  */
 export function AutoFit({ children, size = 2.2, spin = false, spinSpeed = 0.5 }) {

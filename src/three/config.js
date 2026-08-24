@@ -115,6 +115,26 @@ export const smoothstep = (t) => t * t * (3 - 2 * t);
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const span = (t, a, b) => clamp01((t - a) / (b - a));
 
+// ---- sled layer separation ----
+//
+// While the bay is presented for inspection the sled separates into its three
+// physical layers along the deck normal: the six modules lift off the front of
+// the perfboard, the board itself holds station, and the power hardware drops
+// off the back. That is what makes the front/board/back hierarchy readable
+// instead of something the copy has to assert.
+//
+// Deliberately small. The point is to show which side of the deck a part lives
+// on, not to fly the assembly apart — past about 0.04 the leads visibly tear
+// off their pins and the sled stops reading as one machine.
+export const LAYER_SPREAD = 0.032;
+
+// Ramps in just after the sled settles into the inspect frame and back out as
+// the outro re-stacks the vehicle, so the bay is whole again before it flies.
+export const layerSpreadAt = (p) =>
+  LAYER_SPREAD *
+  smoothstep(span(p, PHASES.inspect.start - 0.01, PHASES.inspect.start + 0.05)) *
+  (1 - smoothstep(span(p, PHASES.outro.start - 0.02, PHASES.outro.start + 0.03)));
+
 // ---- outro: re-stack, ignition, launch ----
 //
 // Beat map across the outro phase (outroT 0..1). Outro is the last phase, so

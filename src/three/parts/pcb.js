@@ -30,7 +30,7 @@ export const MASK = {
   green: { mask: "#0d5a2b", pour: "#0f6b33", trace: "#127a3a", silk: "#e8efe9", edge: "#c8b98a" },
   black: { mask: "#15171b", pour: "#1b1e23", trace: "#23272e", silk: "#e6e9ee", edge: "#8f8a72" },
   violet: { mask: "#4b1f78", pour: "#57258a", trace: "#632c9b", silk: "#efe8f6", edge: "#c8b98a" },
-  // The royal blue of the common PCA9685 / regulator boards. Kept bright on
+  // The royal blue of the common breakout / regulator boards. Kept bright on
   // purpose: a dark navy mask sits low enough that the hover tint drags it
   // visibly toward purple.
   blue: { mask: "#1b52bd", pour: "#1f5cd0", trace: "#2668e0", silk: "#e6edf7", edge: "#c8b98a" },
@@ -256,6 +256,58 @@ export function boardGeometry(wmm, hmm, tmm = 1.6, rmm = 1.6) {
   geo.computeVertexNormals();
   geoCache.set(key, geo);
   return geo;
+}
+
+/**
+ * Surfacing for a bare through-hole perfboard: tan FR4 on a 2.54 mm grid of
+ * tinned pads, each with a drilled hole through the middle.
+ *
+ * This is deliberately not pcbMaps() with another MASK entry. A perfboard has
+ * no solder mask, no ground pour, and no routed traces — generating those and
+ * then covering them would cost the same texture work to produce a board that
+ * reads wrong. The same map goes on both faces, which is correct here: a
+ * perfboard really is pads-both-sides, and it means the component side and the
+ * solder side share one texture instead of two.
+ */
+export function perfMaps({ key, wmm, hmm, pitch = 2.54 }) {
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const W = Math.max(2, Math.round(wmm * PX_PER_MM));
+  const H = Math.max(2, Math.round(hmm * PX_PER_MM));
+  const s = new Surface(W, H);
+  const BOARD = "#c9bc93"; // bare tan FR4
+  const TIN = "#b9bfc6"; // tinned pad ring
+  const HOLE = "#3a352a";
+
+  s.set([BOARD, 0.72, 0.0]);
+  s.fillAll();
+
+  const step = pitch * PX_PER_MM;
+  const padR = 0.52 * PX_PER_MM;
+  const holeR = 0.24 * PX_PER_MM;
+  // Centre the grid so the border margin is even on both sides.
+  const cols = Math.floor((wmm - 1.6) / pitch);
+  const rows = Math.floor((hmm - 1.6) / pitch);
+  const x0 = (W - (cols - 1) * step) / 2;
+  const y0 = (H - (rows - 1) * step) / 2;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = x0 + c * step;
+      const y = y0 + r * step;
+      s.set([TIN, 0.3, 0.85]);
+      s.disc(x, y, padR);
+      s.set([HOLE, 0.9, 0.0]);
+      s.disc(x, y, holeR);
+    }
+  }
+
+  const maps = s.textures();
+  maps.edge = "#c8b98a";
+  maps.silkColor = BOARD;
+  cache.set(key, maps);
+  return maps;
 }
 
 // FR4 edge — the raw fiberglass a board shows where it was routed out.

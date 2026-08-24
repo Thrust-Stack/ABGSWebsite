@@ -602,19 +602,20 @@ function HomeExperience() {
         {/* SLED OUT */}
         <Overlay phase="sledOut" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left">
           <OverlayText kicker="AVIONICS BAY" tone="green" title="The sled comes out.">
-            Every sensor, radio, and computer rides on one deck inside the nose cone. On this
-            vehicle the nose <em style={{ fontStyle: "normal", color: "inherit" }}>is</em> the
-            avionics bay. Boards run in a single column down the taper, power hardware on the
-            back face, and the whole bay slides out the base in one piece.
+            Every sensor, controller, and battery rides on one deck inside the nose cone. On
+            this vehicle the nose <em style={{ fontStyle: "normal", color: "inherit" }}>is</em> the
+            avionics bay. One perfboard runs down the front face carrying all six modules, the
+            two power systems sit on the back, and the whole bay slides out the base in one piece.
           </OverlayText>
         </Overlay>
 
         {/* INSPECT */}
         <Overlay phase="inspect" scrollYProgress={scrollYProgress} dodge={!!selectedId} align="left" interactive>
           <div style={{ pointerEvents: "auto", maxWidth: 400 }}>
-            <OverlayText kicker="FLIGHT HARDWARE" tone="green" title="Nine boards on one sled.">
-              Pick any component, on the sled or in the list, to pull it out and see what it
-              does and how it wires in.
+            <OverlayText kicker="FLIGHT HARDWARE" tone="green" title="One board, two power systems.">
+              Modules lift off the front of the perfboard; the batteries, converters, and
+              switch housing sit behind it. Pick any part, on the sled or in the list, to pull
+              it out and see what it does and how it wires in.
             </OverlayText>
             {!isMobile && <ComponentLegend />}
           </div>

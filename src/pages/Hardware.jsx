@@ -4,7 +4,7 @@ import { Kicker, SectionTitle, Lead, Panel, Tag, useIsMobile } from "../design/p
 import { Reveal, RevealGroup, RevealItem } from "../design/motion";
 import { Button } from "../design/primitives";
 import { useWebGLSupport, usePrefersReducedMotion, useIsTouch } from "../three/hooks";
-import { components, servoSystem } from "../data/project";
+import { components, servoSystem, connections, wiringDiagram } from "../data/project";
 
 // The per-board 3D render pulls in three/R3F; lazy-load it so it splits into its
 // own chunk and only downloads once a visitor actually opens a card's 3D view.
@@ -19,10 +19,27 @@ const TONE = { blue: color.blue, orange: color.orange, green: color.green, metal
 function ComponentCard({ c, webgl, onOpen }) {
   const tone = TONE[c.tone] || color.metal;
   const clickable = webgl;
+  // Panel renders a plain div, so a clickable card has to carry its own button
+  // semantics: reachable by Tab, operable with Enter/Space, and announced as a
+  // button that opens the 3D view rather than as anonymous text.
+  const activate = clickable ? () => onOpen(c) : undefined;
   return (
     <Panel
       interactive
-      onClick={clickable ? () => onOpen(c) : undefined}
+      onClick={activate}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `${c.name} — inspect in 3D` : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                activate();
+              }
+            }
+          : undefined
+      }
       style={{
         padding: "26px 24px",
         height: "100%",
@@ -204,14 +221,241 @@ function BoardModal({ c, reduced, isTouch, onClose }) {
   );
 }
 
+// ---- wiring section -----------------------------------------------------
+
+/**
+ * The board drawing, shown full-bleed inside its panel.
+ *
+ * It is a 3.9:1 schematic, so at page width the pin legends are unreadable.
+ * Rather than shrink it to a decorative strip, it scrolls horizontally at a
+ * height where the nets are legible, and opens full-screen on click for the
+ * whole board at once — the same click-to-enlarge affordance the component
+ * cards use, so the interaction is already familiar by the time you reach it.
+ */
+function WiringDiagram({ isMobile, onOpen }) {
+  return (
+    <Panel
+      interactive
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      aria-label="Perfboard wiring drawing — open full screen"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      style={{ overflow: "hidden", cursor: "pointer" }}
+    >
+      <div style={{ overflowX: "auto", background: color.bg0 }}>
+        <img
+          src={wiringDiagram.src}
+          alt={wiringDiagram.alt}
+          loading="lazy"
+          style={{
+            display: "block",
+            height: isMobile ? 210 : 300,
+            width: "auto",
+            maxWidth: "none",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          padding: "12px 16px",
+          fontFamily: font.mono,
+          fontSize: 10,
+          letterSpacing: "0.16em",
+          color: color.textFaint,
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span>{wiringDiagram.cap}</span>
+        <span aria-hidden style={{ color: color.blue }}>SCROLL SIDEWAYS · CLICK TO ENLARGE →</span>
+      </div>
+    </Panel>
+  );
+}
+
+/** The diagram at full screen, pannable. Escape or a click outside closes it. */
+function DiagramModal({ onClose }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Perfboard wiring drawing, full screen"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(4,5,7,0.94)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        style={{
+          position: "absolute",
+          top: 18,
+          right: 20,
+          width: 38,
+          height: 38,
+          borderRadius: "50%",
+          border: `1px solid ${color.line2}`,
+          background: "rgba(255,255,255,0.04)",
+          color: color.text,
+          fontSize: 17,
+          cursor: "pointer",
+          lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+      {/* Stop propagation so panning the drawing doesn't dismiss it. */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxHeight: "100%", overflow: "auto", borderRadius: radius.base }}
+      >
+        <img
+          src={wiringDiagram.src}
+          alt={wiringDiagram.alt}
+          style={{ display: "block", width: "auto", minWidth: "100%", maxWidth: "none" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** One part's pin table(s). */
+function ConnectionGroup({ g, isMobile }) {
+  const tone = TONE[g.tone] || color.metal;
+  return (
+    <Panel style={{ padding: isMobile ? "20px 16px" : "24px 26px", height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+        <span
+          aria-hidden
+          style={{ width: 8, height: 8, borderRadius: "50%", background: tone, opacity: 0.9, flexShrink: 0 }}
+        />
+        <span style={{ fontFamily: font.display, fontSize: 16, fontWeight: 600, color: color.text }}>{g.part}</span>
+        <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", color: tone, textTransform: "uppercase" }}>
+          {g.sub}
+        </span>
+      </div>
+
+      {g.tables.map((t, ti) => (
+        <div key={ti} style={{ overflowX: "auto", marginTop: ti === 0 ? 16 : 14 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: font.mono, fontSize: 11.5 }}>
+            <thead>
+              <tr>
+                {t.cols.map((c) => (
+                  <th
+                    key={c}
+                    scope="col"
+                    style={{
+                      textAlign: "left",
+                      padding: "0 12px 8px 0",
+                      fontSize: 9.5,
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase",
+                      color: color.textGhost,
+                      fontWeight: 500,
+                      borderBottom: `1px solid ${color.line}`,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {t.rows.map((r, ri) => (
+                <tr key={ri}>
+                  {r.map((cell, ci) => (
+                    <td
+                      key={ci}
+                      style={{
+                        padding: "9px 12px 9px 0",
+                        borderBottom: ri === t.rows.length - 1 ? "none" : `1px solid ${color.line}`,
+                        color: ci === 0 ? color.text : ci === 1 ? tone : color.textDim,
+                        // Pin names never wrap. The middle column holds either a
+                        // short pin ("GPIO 16") or a phrase ("All 4 servo red
+                        // (VCC) wires"); keeping the phrase on one line forces
+                        // the notes column off the panel edge, where Panel's own
+                        // overflow:hidden clips it. So nowrap only what is
+                        // actually short.
+                        whiteSpace:
+                          ci === 0 || (ci === 1 && String(cell).length <= 14) ? "nowrap" : "normal",
+                        verticalAlign: "top",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {g.note && (
+        <p
+          style={{
+            fontFamily: font.body,
+            fontSize: 12.5,
+            lineHeight: 1.65,
+            color: color.textFaint,
+            margin: "14px 0 0",
+            paddingTop: 12,
+            borderTop: `1px solid ${color.line}`,
+          }}
+        >
+          {g.note}
+        </p>
+      )}
+    </Panel>
+  );
+}
+
 export default function Hardware() {
   const isMobile = useIsMobile();
   const webgl = useWebGLSupport();
   const reduced = usePrefersReducedMotion();
   const isTouch = useIsTouch();
-  const systems = ["Processing / Control", "Sensing", "Communications", "Actuation", "Power"];
+  // Grouping order for the cards: what runs the vehicle, what it senses with,
+  // where the data goes, how it gets off the vehicle, what carries it all, and
+  // what powers it.
+  const systems = ["Processing / Control", "Sensing", "Data Storage", "Communications", "Structure", "Power"];
   // The component whose 3D render is currently open in front of the viewer.
   const [active, setActive] = useState(null);
+  // The wiring drawing, opened full screen for the whole board at once.
+  const [diagramOpen, setDiagramOpen] = useState(false);
 
   return (
     <>
@@ -221,9 +465,10 @@ export default function Hardware() {
           <Kicker>AVIONICS BAY</Kicker>
           <SectionTitle>Hardware Stack</SectionTitle>
           <Lead>
-            Nine off-the-shelf components, one custom sled. Every part below is also
-            explorable in 3D on the home page. Scroll to the avionics sequence and pull
-            any component out of the rocket.
+            Six off-the-shelf modules on a single perfboard, two independent power systems
+            behind it, and one custom sled carrying both. Every part below is also explorable
+            in 3D on the home page — scroll to the avionics sequence and pull any component
+            out of the rocket.
           </Lead>
           <div style={{ marginTop: 22 }}>
             <Button to="/" size="sm" variant="ghost">Open the 3D experience →</Button>
@@ -274,22 +519,47 @@ export default function Hardware() {
             <Kicker tone="green">AS BUILT</Kicker>
             <SectionTitle style={{ fontSize: "clamp(24px, 3.5vw, 34px)" }}>The Real Sled</SectionTitle>
             <Lead>
-              The flight avionics sled under assembly. Sensors and GPS forward, ESP32 and
-              Raspberry Pi 5 mid-deck, power hardware at the base, all riding inside the
-              nose cone.
+              The flight avionics under assembly. Every module is soldered to the component
+              side of one perfboard; the point-to-point wiring that connects them is on the
+              board's back face. The batteries, step-down converters, and switch housing ride
+              behind the sled, and the whole assembly slides into the nose cone.
             </Lead>
           </Reveal>
+          {/* Two up, not three: these are tall portrait shots, and at a third of
+              the page width the board detail they exist to show is gone. Four
+              photos also land as a clean 2x2 rather than a row of three and an
+              orphan. */}
           <RevealGroup
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))",
               gap: 16,
               marginTop: 28,
             }}
           >
+            {/* Ordered as the assembly reads: the two faces of the sled first,
+                then the two faces of the board that rides on the front of it. */}
             {[
-              { src: "/components/IMG_9755.jpg", cap: "COMPONENT SIDE / GPS, ESP32, MICROSD" },
-              { src: "/components/IMG_9754.jpg", cap: "SOLDER SIDE / POINT-TO-POINT WIRING" },
+              {
+                src: "/components/sled-front.jpg",
+                cap: "FRONT OF SLED / PERFBOARD INSTALLED",
+                alt: "The front of the avionics sled inside the nose tube, with both perfboard segments installed and their modules facing out.",
+              },
+              {
+                src: "/components/sled-back.jpg",
+                cap: "BACK OF SLED / PACKS, CONVERTERS, SWITCHES",
+                alt: "The back of the avionics sled: both LiPo packs taped in place, the step-down converters between them, and the switch terminals at the base.",
+              },
+              {
+                src: "/components/perfboard-front.jpg",
+                cap: "COMPONENT SIDE / EVERY MODULE LABELLED",
+                alt: "The perfboard held in one hand, component side up, with the gyroscope, microSD reader, Heltec, ESP32, BMP585, and GPS each labelled.",
+              },
+              {
+                src: "/components/perfboard-solder.jpg",
+                cap: "SOLDER SIDE / POINT-TO-POINT WIRING",
+                alt: "The back of the perfboard, showing the point-to-point solder joints and coloured wire runs that connect the modules.",
+              },
             ].map((p) => (
               <RevealItem key={p.src}>
                 <Panel style={{ overflow: "hidden" }}>
@@ -308,15 +578,51 @@ export default function Hardware() {
                   >
                     <img
                       src={p.src}
-                      alt={p.cap.toLowerCase()}
+                      alt={p.alt}
                       loading="lazy"
-                      style={{ width: "100%", maxHeight: 560, display: "block", objectFit: "contain" }}
+                      style={{ width: "100%", maxHeight: 620, display: "block", objectFit: "contain" }}
                     />
                   </div>
                   <div style={{ padding: "12px 16px", fontFamily: font.mono, fontSize: 10, letterSpacing: "0.16em", color: color.textFaint }}>
                     {p.cap}
                   </div>
                 </Panel>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+        </div>
+
+        {/* Wiring: the board drawing plus the as-built pinout */}
+        <div style={{ marginTop: 64 }}>
+          <Reveal>
+            <Kicker tone="blue">WIRING</Kicker>
+            <SectionTitle style={{ fontSize: "clamp(24px, 3.5vw, 34px)" }}>Pinout &amp; Connections</SectionTitle>
+            <Lead>
+              Every net on the perfboard, and the pin each one lands on. The sensors share one
+              I2C bus, the GPS runs on its own UART, the card reader sits on SPI, and the Heltec
+              takes finished frames over a single serial line. This is the as-built wiring, not
+              a plan.
+            </Lead>
+          </Reveal>
+
+          <Reveal delay={0.08}>
+            <div style={{ marginTop: 28 }}>
+              <WiringDiagram isMobile={isMobile} onOpen={() => setDiagramOpen(true)} />
+            </div>
+          </Reveal>
+
+          <RevealGroup
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))",
+              gap: 16,
+              marginTop: 20,
+              alignItems: "start",
+            }}
+          >
+            {connections.map((g) => (
+              <RevealItem key={g.id}>
+                <ConnectionGroup g={g} isMobile={isMobile} />
               </RevealItem>
             ))}
           </RevealGroup>
@@ -357,6 +663,7 @@ export default function Hardware() {
     {active && (
       <BoardModal c={active} reduced={reduced} isTouch={isTouch} onClose={() => setActive(null)} />
     )}
+    {diagramOpen && <DiagramModal onClose={() => setDiagramOpen(false)} />}
     </>
   );
 }

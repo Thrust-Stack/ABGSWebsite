@@ -128,7 +128,9 @@ export function useAssembly() {
 }
 
 // Servo mount assembly: the team's in-house bracket carrying a real
-// BlueBird BMS-127WV+, its lead running up into the airframe toward the sled.
+// BlueBird BMS-127WV+. Its 3-wire lead runs forward into the airframe toward the
+// sled, where the signal comes off the Main ESP32 and the rail off the servo
+// step-down converter.
 export function ServoMountAssembly({ hornRef }) {
   const s = 0.62;
   return (
@@ -155,7 +157,7 @@ export function ServoMountAssembly({ hornRef }) {
         <cylinderGeometry args={[0.032, 0.032, 0.03, 18]} />
         <meshStandardMaterial color="#6d7480" metalness={0.95} roughness={0.32} emissiveIntensity={0} />
       </mesh>
-      {/* 3-wire lead to the PCA9685, disappearing forward into the body tube */}
+      {/* 3-wire lead toward the sled, disappearing forward into the body tube */}
       <ServoLead scale={1.4} />
     </group>
   );

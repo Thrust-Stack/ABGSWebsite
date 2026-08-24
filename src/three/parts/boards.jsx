@@ -1,24 +1,26 @@
-// The nine avionics boards, modelled from the real hardware.
+// The avionics hardware, modelled from the real build.
 //
-// Reference note: these are built from geometry at each board's real published
+// Reference note: these are built from geometry at each part's real published
 // dimensions rather than imported from the model libraries the team linked
 // (Sketchfab / CGTrader / GrabCAD). Those assets are individually licensed and
 // would have to be redistributed with this repo; building them keeps the
 // vehicle wholly ours, keeps the payload to kilobytes instead of megabytes, and
-// lets every board share one lighting and interaction model. Dimensions come
+// lets every part share one lighting and interaction model. Dimensions come
 // from the manufacturers' mechanical drawings; colours and layout are matched
-// to the real parts.
+// to the team's build photos in public/components.
 //
 // Everything below is in millimetres. `MM` converts to sled units at the point
 // of assembly, so no number in this file is a magic scale factor.
 import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
-import { pcbMaps, boardGeometry, edgeMaterial } from "./pcb";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { pcbMaps, perfMaps, boardGeometry, edgeMaterial } from "./pcb";
 import { SLED_MM } from "../config";
+import { PERF_MAIN, PERF_FWD, PERF_FWD_LOCAL_Y, PERF_T } from "./layout";
 import {
-  PinHeader, Chip, Shield, Passive, Led, UsbAStack, Rj45, MicroHdmi, UsbC,
-  MicroUsb, StemmaQt, TerminalBlock, CoinCell, AntennaTrace, finStackGeometry,
+  PinHeader, Chip, Shield, Passive, Led, UsbC, MicroUsb, StemmaQt,
+  TerminalBlock, CoinCell, AntennaTrace,
 } from "./primitives";
 
 export const MM = SLED_MM; // mm -> sled units
@@ -47,94 +49,146 @@ function Pcb({ id, w, h, tone, seed = 7, silk, t = 1.6 }) {
 
 const TOP = 0.8; // board half-thickness — the component-side surface
 
-// ---- Raspberry Pi 5 — 85 x 56 mm ---------------------------------------
-// Long axis on Y, GPIO on the +X edge, ports on the -Y edge.
-const piSilk = (s, W, H, u) => {
-  s.text("Raspberry Pi 5", W / 2 - 6 * u, H / 2 + 30 * u, 2.6 * u, -Math.PI / 2);
-  s.each((c) => c.strokeRect(2 * u, 2 * u, W - 4 * u, H - 4 * u));
-};
+// ---- the perfboard -----------------------------------------------------
+//
+// Two soldered segments carrying every avionics module on the front of the
+// sled. Sizes come from layout.js, which derives them from the nose cone
+// taper, so the board rendered here is the board the modules were placed on.
 
-export function RaspberryPi5() {
+/** One bare perfboard segment: tan FR4 on a 2.54 mm grid of tinned pads. */
+function PerfSegment({ id, w, h }) {
+  const maps = useMemo(() => perfMaps({ key: id, wmm: w, hmm: h }), [id, w, h]);
+  const mats = useMemo(
+    () => [
+      new THREE.MeshStandardMaterial({
+        map: maps.map,
+        roughnessMap: maps.roughnessMap,
+        metalnessMap: maps.metalnessMap,
+        metalness: 1,
+        roughness: 1,
+      }),
+      edgeMaterial(maps.edge),
+    ],
+    [maps]
+  );
+  return <mesh geometry={boardGeometry(w, h, PERF_T, 1.0)} material={mats} />;
+}
+
+/**
+ * The solder side.
+ *
+ * This is the face that turns in toward the sled deck, and it is the reason
+ * the build is one rigid assembly rather than a stack of jumper leads — so it
+ * has to be visible when the board is pulled out and turned over, not implied.
+ *
+ * Built as two merged geometries (one for the solder joints, one for the wire
+ * runs) so the whole face costs two draw calls. The runs follow the column the
+ * modules sit in: bus lines down the board with short hops between adjacent
+ * footprints, which is what the point-to-point wiring in perfboard-solder.jpg looks like.
+ */
+function solderSideGeometry() {
+  const P = 2.54;
+  const cols = Math.floor((PERF_MAIN.w - 1.6) / P);
+  const rows = Math.floor((PERF_MAIN.h - 1.6) / P);
+  const gx = (c) => (c - (cols - 1) / 2) * P;
+  const gy = (r) => (r - (rows - 1) / 2) * P;
+
+  // Joints sit under every module footprint's header rows.
+  const jointGeo = new THREE.SphereGeometry(0.62, 6, 5);
+  const joints = [];
+  const addJoint = (x, y) => {
+    const g = jointGeo.clone();
+    g.scale(1, 1, 0.62);
+    g.translate(x, y, -0.2);
+    joints.push(g);
+  };
+
+  // Wire runs, in board-local mm, as [x, y] polylines down the two bus columns
+  // and across to each footprint.
+  const runs = [];
+  const addRun = (pts, depth) => {
+    const v = pts.map(([x, y]) => new THREE.Vector3(x, y, -depth));
+    const curve = new THREE.CatmullRomCurve3(v, false, "centripetal", 0.4);
+    runs.push(new THREE.TubeGeometry(curve, Math.max(8, pts.length * 5), 0.42, 5, false));
+  };
+
+  const leftX = gx(1);
+  const rightX = gx(cols - 2);
+  // The two power/bus rails that run the length of the board.
+  addRun([[leftX, gy(1)], [leftX, gy(rows - 2)]], 1.1);
+  addRun([[rightX, gy(1)], [rightX, gy(rows - 2)]], 1.1);
+
+  // Module footprints: header rows to solder, and a hop out to each rail.
+  const foot = [
+    { y: 56, half: 24, w: 12.7 }, // Heltec
+    { y: 0.5, half: 26, w: 12.7 }, // Main ESP32
+    { y: -37.5, half: 7, w: 8 }, // BMP585
+    { y: -65.5, half: 15, w: 10 }, // GPS
+  ];
+  for (const f of foot) {
+    for (const sx of [-f.w, f.w]) {
+      for (let i = -f.half; i <= f.half; i += P * 2) addJoint(sx, f.y + i);
+    }
+    addRun([[-f.w, f.y + f.half * 0.6], [leftX, f.y + f.half * 0.6]], 1.6);
+    addRun([[f.w, f.y - f.half * 0.6], [rightX, f.y - f.half * 0.6]], 1.6);
+    // The signal hop between this footprint and the next one down the column.
+    addRun(
+      [
+        [-f.w + 2, f.y - f.half],
+        [-f.w + 6, f.y - f.half - 8],
+        [f.w - 6, f.y - f.half - 14],
+      ],
+      2.0
+    );
+  }
+
+  const solder = mergeGeometries(joints, false);
+  joints.forEach((g) => g.dispose());
+  jointGeo.dispose();
+  const wire = mergeGeometries(runs, false);
+  runs.forEach((g) => g.dispose());
+  return { solder, wire };
+}
+
+export function Perfboard() {
+  const { solder, wire } = useMemo(() => solderSideGeometry(), []);
   return (
     <group>
-      <Pcb id="pi5" w={56} h={85} tone="green" seed={11} silk={piSilk} />
-
-      {/* 40-pin GPIO header, 3.5 mm from the long edge */}
-      <group position={[24.5, 13.6, TOP]} rotation={[0, 0, Math.PI / 2]}>
-        <PinHeader cols={20} rows={2} />
+      {/* main segment: Heltec, Main ESP32, altimeter, GPS */}
+      <PerfSegment id="perf-main" w={PERF_MAIN.w} h={PERF_MAIN.h} />
+      {/* forward segment: microSD reader with the IMU raised over it */}
+      <group position={[0, PERF_FWD_LOCAL_Y, 0]}>
+        <PerfSegment id="perf-fwd" w={PERF_FWD.w} h={PERF_FWD.h} />
       </group>
 
-      {/* Official Active Cooler: fan over the PMIC side, fins over the SoC */}
-      <group position={[0, 8, TOP]}>
-        <mesh position={[0, 0, 1]}>
-          <boxGeometry args={[46, 30, 2]} />
-          <meshStandardMaterial color="#1e2127" metalness={0.85} roughness={0.44} />
+      {/* solder side — faces the deck when mounted, visible when turned over */}
+      <group position={[0, 0, -PERF_T / 2]}>
+        <mesh geometry={solder}>
+          <meshStandardMaterial color="#b6bcc4" metalness={0.92} roughness={0.28} />
         </mesh>
-        <mesh geometry={finStackGeometry(18, 24, 27, 9)} position={[9, 0, 2]}>
-          <meshStandardMaterial color="#22262d" metalness={0.88} roughness={0.4} />
-        </mesh>
-        {/* fan housing + rotor */}
-        <mesh position={[-13, 0, 5]}>
-          <boxGeometry args={[18, 18, 6]} />
-          <meshStandardMaterial color="#15181d" metalness={0.3} roughness={0.6} />
-        </mesh>
-        <mesh position={[-13, 0, 8.2]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[7.4, 7.4, 0.8, 20]} />
-          <meshStandardMaterial color="#0c0e11" metalness={0.2} roughness={0.7} />
-        </mesh>
-        <mesh position={[-13, 0, 8.8]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[2.6, 2.6, 1.2, 14]} />
-          <meshStandardMaterial color="#2a2f37" metalness={0.5} roughness={0.5} />
+        <mesh geometry={wire}>
+          <meshStandardMaterial color="#1a1d22" metalness={0.05} roughness={0.42} />
         </mesh>
       </group>
 
-      {/* ports edge: Ethernet, then the two USB stacks */}
-      <group position={[18, -35, TOP]}>
-        <Rj45 />
-      </group>
-      <group position={[2, -37, TOP]}>
-        <UsbAStack tone="#12305e" />
-      </group>
-      <group position={[-14, -37, TOP]}>
-        <UsbAStack tone="#111318" />
-      </group>
-
-      {/* opposite long edge: USB-C power, 2x micro-HDMI */}
-      <group position={[-27, 16, TOP]} rotation={[0, 0, Math.PI / 2]}>
-        <UsbC />
-      </group>
-      <group position={[-27.5, 2, TOP]} rotation={[0, 0, Math.PI / 2]}>
-        <MicroHdmi />
-      </group>
-      <group position={[-27.5, -12, TOP]} rotation={[0, 0, Math.PI / 2]}>
-        <MicroHdmi />
-      </group>
-
-      {/* PCIe FFC, camera/display FFCs, PoE header */}
-      <group position={[16, -25, TOP]}>
-        <Chip w={4} d={20} h={2.4} dimple={false} />
-      </group>
-      <group position={[-20, -24, TOP]}>
-        <Chip w={2.6} d={17} h={2.2} dimple={false} />
-      </group>
-      <group position={[-20, -6, TOP]}>
-        <Chip w={2.6} d={17} h={2.2} dimple={false} />
-      </group>
-
-      <group position={[-22, 32, TOP]}>
-        <Passive w={6} d={5} h={1.6} color="#1a1d22" />
-      </group>
-      <group position={[20, 36, TOP]}>
-        <Led color="#39d353" size={1.6} />
-      </group>
-      <group position={[20, 32, TOP]}>
-        <Led color="#ff3b30" size={1.6} />
-      </group>
+      {/* nylon standoffs at the four corners of the main segment */}
+      {[-1, 1].map((sx) =>
+        [-1, 1].map((sy) => (
+          <mesh
+            key={`${sx}${sy}`}
+            position={[sx * (PERF_MAIN.w / 2 - 3), sy * (PERF_MAIN.h / 2 - 3), -2.3]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
+            <cylinderGeometry args={[1.5, 1.5, 3, 10]} />
+            <meshStandardMaterial color="#15181d" metalness={0.1} roughness={0.6} />
+          </mesh>
+        ))
+      )}
     </group>
   );
 }
 
-// ---- ESP32 NodeMCU — 55 x 28 mm ----------------------------------------
+// ---- Main ESP32 (NodeMCU-style dev board) — 55 x 28 mm -----------------
 const espSilk = (s, W, H, u) => {
   s.text("ESP32", W / 2, H - 4.5 * u, 2.4 * u);
   s.each((c) => c.strokeRect(4 * u, 1.5 * u, W - 8 * u, 27 * u));
@@ -179,7 +233,7 @@ export function Esp32() {
         </group>
       ))}
 
-      {/* the two 19-pin breakout rows */}
+      {/* the two 19-pin breakout rows — the servo leads leave from the right */}
       {[-12.7, 12.7].map((x) => (
         <group key={x} position={[x, 0, TOP]} rotation={[0, 0, Math.PI / 2]}>
           <PinHeader cols={19} rows={1} />
@@ -196,18 +250,106 @@ export function Esp32() {
   );
 }
 
-// ---- MPU6050 (GY-521) — 21.2 x 15.6 mm ---------------------------------
-// The GY-521 really is violet; it is the one board on the sled that isn't
-// black or green, and leaving it accurate is more honest than palette-matching.
-const mpuSilk = (s, W, H, u) => {
-  s.text("GY-521", W / 2, H - 3 * u, 2 * u);
+// ---- Heltec ESP32 telemetry transmitter — 50.2 x 25.5 mm ---------------
+// An ESP32 module with the LoRa radio and its antenna connector on the same
+// board, plus the small OLED at the forward end that identifies it on sight.
+const heltecSilk = (s, W, H, u) => {
+  s.text("HELTEC LoRa", W / 2, H - 3.2 * u, 1.9 * u);
   s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
 };
 
-export function Mpu6050() {
+export function HeltecEsp32() {
   return (
     <group>
-      <Pcb id="mpu6050" w={21.2} h={15.6} tone="violet" seed={5} silk={mpuSilk} />
+      <Pcb id="heltec" w={25.5} h={50.2} tone="black" seed={37} silk={heltecSilk} />
+
+      {/* SoC under its shield can */}
+      <group position={[0, 6, TOP]}>
+        <mesh position={[0, 0, 0.4]}>
+          <boxGeometry args={[17, 17.5, 0.8]} />
+          <meshStandardMaterial color="#101216" metalness={0} roughness={0.55} />
+        </mesh>
+        <group position={[0, -1.5, 0.8]}>
+          <Shield w={15} d={13} h={2.4} />
+        </group>
+        <group position={[0, 6.6, 0.8]}>
+          <AntennaTrace w={12} d={4} />
+        </group>
+      </group>
+
+      {/* 0.96" OLED at the forward end — glass over a black carrier */}
+      <group position={[0, 19.5, TOP]}>
+        <mesh position={[0, 0, 1.1]}>
+          <boxGeometry args={[22, 11, 2.2]} />
+          <meshStandardMaterial color="#0a0c0f" metalness={0.1} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 0.6, 2.25]}>
+          <boxGeometry args={[19.6, 8.2, 0.2]} />
+          <meshStandardMaterial
+            color="#0d1014"
+            metalness={0.35}
+            roughness={0.14}
+            emissive="#12324a"
+            emissiveIntensity={0.35}
+          />
+        </mesh>
+      </group>
+
+      {/* LoRa transceiver + u.FL antenna connector */}
+      <group position={[-6.5, -6, TOP]}>
+        <Chip w={5.5} d={5.5} h={1.1} />
+      </group>
+      <group position={[8.6, -8, TOP]}>
+        <mesh position={[0, 0, 0.7]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[1.4, 1.4, 1.4, 10]} />
+          <meshStandardMaterial color="#b9c0c9" metalness={1} roughness={0.34} />
+        </mesh>
+      </group>
+
+      {/* USB-C at the aft end */}
+      <group position={[0, -24, TOP]}>
+        <UsbC />
+      </group>
+
+      {/* breakout rows */}
+      {[-11.4, 11.4].map((x) => (
+        <group key={x} position={[x, -2, TOP]} rotation={[0, 0, Math.PI / 2]}>
+          <PinHeader cols={18} rows={1} />
+        </group>
+      ))}
+
+      <group position={[-6.5, -15, TOP]}>
+        <Led color="#12e29a" size={1.3} />
+      </group>
+    </group>
+  );
+}
+
+// ---- MPU6500 IMU (GY-6500 breakout) — 21.2 x 15.6 mm -------------------
+// The GY breakout really is violet; it is the one board on the sled that isn't
+// black or tan, and leaving it accurate is more honest than palette-matching.
+const mpuSilk = (s, W, H, u) => {
+  s.text("GY-6500", W / 2, H - 3 * u, 1.9 * u);
+  s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
+};
+
+export function Mpu6500({ raised = 0 }) {
+  return (
+    <group>
+      {/* On the sled this board is stood off over the microSD reader on its own
+          header, so it needs the pins that hold it there — without them it
+          reads as floating rather than mounted. `raised` is the standoff height
+          in mm, and is 0 anywhere the board is shown on its own. */}
+      {raised > 0 &&
+        [-7.5, 7.5].map((x) => (
+          <group key={x} position={[x, -6.3, -raised / 2 - 0.8]}>
+            <mesh>
+              <boxGeometry args={[1.5, 12, raised]} />
+              <meshStandardMaterial color="#0d0f13" metalness={0.2} roughness={0.55} />
+            </mesh>
+          </group>
+        ))}
+      <Pcb id="mpu6500" w={21.2} h={15.6} tone="violet" seed={5} silk={mpuSilk} />
       <group position={[0, 1.5, TOP]}>
         <Chip w={4} d={4} h={0.9} />
       </group>
@@ -227,7 +369,7 @@ export function Mpu6050() {
   );
 }
 
-// ---- BMP585 (Adafruit breakout) — 25.5 x 17.5 mm -----------------------
+// ---- BMP585 barometric altimeter (Adafruit breakout) — 25.5 x 17.5 mm --
 const bmpSilk = (s, W, H, u) => {
   s.text("BMP585", W / 2, 4 * u, 2.2 * u);
   s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
@@ -261,7 +403,7 @@ export function Bmp585() {
   );
 }
 
-// ---- Adafruit Ultimate GPS v3 — 25.5 x 35 mm ---------------------------
+// ---- GPS module (Adafruit Ultimate GPS v3) — 25.5 x 35 mm --------------
 const gpsSilk = (s, W, H, u) => {
   s.text("ULTIMATE GPS", W / 2, H - 8.5 * u, 1.9 * u);
   s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
@@ -296,129 +438,146 @@ export function UltimateGps() {
   );
 }
 
-// ---- RFM95W LoRa breakout — 25.5 x 19 mm -------------------------------
-const loraSilk = (s, W, H, u) => {
-  s.text("RFM95W 915", W / 2, H - 3.5 * u, 1.9 * u);
+// ---- Adafruit MicroSD card reader — 23 x 43 mm -------------------------
+// The 5 V-ready breakout: level shifter on the aft half, the card socket
+// forward, and the header row down the long edge that lands on the perfboard.
+const sdSilk = (s, W, H, u) => {
+  s.text("MICRO-SD", W / 2, 5 * u, 2.0 * u);
   s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
 };
 
-export function Rfm95w() {
+export function MicroSdReader() {
   return (
     <group>
-      <Pcb id="rfm95w" w={25.5} h={19} tone="black" seed={41} silk={loraSilk} />
-      {/* the HopeRF module: its own substrate under a shield can */}
-      <group position={[0, 2, TOP]}>
-        <mesh position={[0, 0, 0.5]}>
-          <boxGeometry args={[16, 16, 1]} />
-          <meshStandardMaterial color="#101216" metalness={0} roughness={0.55} />
-        </mesh>
-        <group position={[0, 0, 1]}>
-          <Shield w={15} d={15} h={2} />
-        </group>
-      </group>
-      {/* u.FL antenna pad */}
-      <group position={[10, 2, TOP]}>
-        <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[1.3, 1.3, 1.2, 10]} />
-          <meshStandardMaterial color="#b9c0c9" metalness={1} roughness={0.34} />
-        </mesh>
-      </group>
-      <group position={[0, -7.2, TOP]}>
-        <PinHeader cols={9} rows={1} />
-      </group>
-    </group>
-  );
-}
+      <Pcb id="microsd" w={23} h={43} tone="blue" seed={19} silk={sdSilk} />
 
-// ---- PCA9685 16-channel servo driver — 25.4 x 62.5 mm ------------------
-// The team's board is the blue variant, not Adafruit's black one (build photo
-// IMG_9480), with screw terminals for the servo rail. The 16x3 header field is
-// its signature, and it's what the canard servo harness lands on.
-const pcaSilk = (s, W, H, u) => {
-  s.text("PCA9685", W / 2 - 7.5 * u, H / 2, 2.2 * u, -Math.PI / 2);
-  s.each((c) => c.strokeRect(1.5 * u, 1.5 * u, W - 3 * u, H - 3 * u));
-};
+      {/* the card socket — a steel shell with the card slot on the forward end */}
+      <group position={[1, 10, TOP]}>
+        <mesh position={[0, 0, 1.4]}>
+          <boxGeometry args={[15, 17, 2.8]} />
+          <meshStandardMaterial color="#b3b9c1" metalness={0.95} roughness={0.34} />
+        </mesh>
+        {/* the exposed card, sitting proud of the slot */}
+        <mesh position={[0, 9.4, 1.3]}>
+          <boxGeometry args={[11, 4.4, 1]} />
+          <meshStandardMaterial color="#1d2a1f" metalness={0.1} roughness={0.62} />
+        </mesh>
+        <mesh position={[6.2, -8.6, 0.5]}>
+          <boxGeometry args={[1.6, 1.6, 1]} />
+          <meshStandardMaterial color="#2a2f37" metalness={0.4} roughness={0.5} />
+        </mesh>
+      </group>
 
-export function Pca9685() {
-  return (
-    <group>
-      <Pcb id="pca9685" w={25.4} h={62.5} tone="blue" seed={13} silk={pcaSilk} />
-      {/* 16 channels x (PWM / V+ / GND) */}
-      <group position={[6.5, 0, TOP]} rotation={[0, 0, Math.PI / 2]}>
-        <PinHeader cols={16} rows={3} />
-      </group>
-      {/* V+ screw terminal */}
-      <group position={[-4, 26, TOP]}>
-        <TerminalBlock ways={2} color="#1d3f7a" />
-      </group>
-      {/* driver IC */}
-      <group position={[-6, 4, TOP]}>
+      {/* level shifter + regulator */}
+      <group position={[-2, -8, TOP]}>
         <Chip w={5} d={9.7} h={1.2} />
       </group>
-      {/* I2C in / chain out */}
-      <group position={[-6, -26, TOP]}>
-        <PinHeader cols={6} rows={1} />
+      <group position={[5.5, -15, TOP]}>
+        <Passive w={3} d={1.6} h={0.9} color="#22262e" />
       </group>
-      <group position={[-9, 14, TOP]}>
-        <Passive w={3} d={1.6} h={0.8} />
+      <group position={[-3, -17, TOP]}>
+        <Led color="#39d353" size={1.3} />
+      </group>
+
+      {/* the 8-way header down the long edge */}
+      <group position={[-9.4, -4, TOP]} rotation={[0, 0, Math.PI / 2]}>
+        <PinHeader cols={8} rows={1} />
       </group>
     </group>
   );
 }
 
-// ---- 5 V BEC / UBEC — 43 x 17 mm ---------------------------------------
-// A small blue regulator board sleeved in clear heatshrink, as in IMG_9480 —
-// the shrink is why it reads as a glossy lozenge rather than a bare PCB.
-const becSilk = (s, W, H, u) => {
-  s.text("5V 5A UBEC", W / 2, H - 3 * u, 1.9 * u);
+// ---- step-down converter — 25 x 16 mm ----------------------------------
+// A small switching buck module. Two of these ride the back of the sled, one
+// per power system; `tone` distinguishes the electronics one from the servo
+// one without inventing a difference in the hardware itself.
+const buckSilk = (s, W, H, u) => {
+  s.text("STEP-DOWN", W / 2, H - 3 * u, 1.7 * u);
 };
 
-export function Ubec() {
+export function StepDown({ id = "buck", tone = "blue" }) {
   return (
     <group>
-      <Pcb id="bec" w={43} h={17} tone="blue" seed={29} silk={becSilk} />
+      <Pcb id={id} w={25} h={16} tone={tone} seed={29} silk={buckSilk} />
       {/* shielded inductor — the visual tell of a switching regulator */}
-      <group position={[2, 1, TOP]}>
+      <group position={[3, 0, TOP]}>
         <mesh position={[0, 0, 2.5]}>
           <boxGeometry args={[7, 7, 5]} />
           <meshStandardMaterial color="#14171c" metalness={0.25} roughness={0.62} />
         </mesh>
       </group>
-      {/* output electrolytic */}
-      <group position={[-9, 0, TOP]}>
-        <mesh position={[0, 0, 3.5]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[3, 3, 7, 18]} />
-          <meshStandardMaterial color="#1b2942" metalness={0.35} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, 0, 7.1]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[2.9, 2.9, 0.3, 18]} />
-          <meshStandardMaterial color="#8f959d" metalness={0.9} roughness={0.45} />
-        </mesh>
-      </group>
-      <group position={[13, 0, TOP]}>
+      {/* input and output electrolytics */}
+      {[-8.5, 9].map((x, i) => (
+        <group key={x} position={[x, 0, TOP]}>
+          <mesh position={[0, 0, 3.2]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[2.7, 2.7, 6.4, 16]} />
+            <meshStandardMaterial color="#1b2942" metalness={0.35} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0, 6.5]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[2.6, 2.6, 0.3, 16]} />
+            <meshStandardMaterial color="#8f959d" metalness={0.9} roughness={0.45} />
+          </mesh>
+          {i === 0 && <Led color="#ff3b30" size={1.1} />}
+        </group>
+      ))}
+      {/* switching IC */}
+      <group position={[-2, -5, TOP]}>
         <Chip w={4} d={5} h={1.1} />
       </group>
-      {/* Clear heatshrink sleeve. A real transmissive material re-renders the
-          whole scene to a buffer every frame for this one small part; a plain
-          transparent glossy shell is visually indistinguishable on a sleeve
-          this size and costs nothing. */}
-      <mesh position={[0, 0, 3.4]}>
-        <boxGeometry args={[45, 19, 11]} />
-        <meshStandardMaterial
-          color="#aeb8c6"
-          roughness={0.22}
-          metalness={0}
-          transparent
-          opacity={0.28}
-        />
-      </mesh>
+      {/* input / output screw terminals */}
+      <group position={[-10, 5.5, TOP]}>
+        <TerminalBlock ways={2} color="#1d3f7a" />
+      </group>
+    </group>
+  );
+}
+
+// ---- switch housing — 44 x 20 mm ---------------------------------------
+// The printed block at the base of the sled. Both step-down converters land on
+// its terminal strip and each power system gets its own arming switch, reachable
+// from outside the airframe with the vehicle on the pad.
+export function SwitchHousing({ w = 44, h = 20, t = 12 }) {
+  return (
+    <group>
+      <RoundedBox args={[w, h, t]} radius={1.4} smoothness={3} position={[0, 0, t / 2]}>
+        <meshStandardMaterial color="#16191f" metalness={0.05} roughness={0.66} />
+      </RoundedBox>
+
+      {/* two arming switches: bezel, toggle bat, and its throw */}
+      {[-10, 10].map((x, i) => (
+        <group key={x} position={[x, 1, t]}>
+          <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[3.6, 3.6, 1.2, 16]} />
+            <meshStandardMaterial color="#8f959d" metalness={0.92} roughness={0.34} />
+          </mesh>
+          <mesh
+            position={[0, i === 0 ? 1.1 : -1.1, 2.6]}
+            rotation={[i === 0 ? 0.5 : -0.5, 0, 0]}
+          >
+            <cylinderGeometry args={[0.9, 1.2, 4.4, 10]} />
+            <meshStandardMaterial color="#c3c9d1" metalness={1} roughness={0.3} />
+          </mesh>
+          <Led
+            color={i === 0 ? "#12e29a" : "#ff6a2c"}
+            size={1.2}
+            intensity={1.8}
+          />
+        </group>
+      ))}
+
+      {/* the terminal strip both converters land on */}
+      <group position={[0, -6.5, t]} rotation={[0, 0, Math.PI / 2]}>
+        <TerminalBlock ways={4} color="#1a1d22" />
+      </group>
     </group>
   );
 }
 
 // ---- 2S LiPo pack -------------------------------------------------------
-// Foil pouch with a printed wrap; leads exit the +Y end toward the BEC.
-export function LipoPack({ w = 35, l = 72, t = 18 }) {
+// Foil pouch with a printed wrap; leads exit the +Y end toward its converter.
+// Two of these ride the back of the sled at different sizes — the electronics
+// pack and the larger servo pack.
+export function LipoPack({ w = 35, l = 72, t = 18, accent = "#ff6a2c" }) {
   return (
     <group>
       <RoundedBox args={[w, l, t]} radius={2.2} smoothness={3} position={[0, 0, t / 2]}>
@@ -431,10 +590,10 @@ export function LipoPack({ w = 35, l = 72, t = 18 }) {
       </mesh>
       <mesh position={[0, -4, t + 0.3]}>
         <boxGeometry args={[w * 0.62, 5, 0.2]} />
-        <meshStandardMaterial color="#ff6a2c" metalness={0.1} roughness={0.6} />
+        <meshStandardMaterial color={accent} metalness={0.1} roughness={0.6} />
       </mesh>
       {/* balance connector */}
-      <mesh position={[10, l / 2 + 2.5, t / 2]}>
+      <mesh position={[w * 0.28, l / 2 + 2.5, t / 2]}>
         <boxGeometry args={[7.5, 5, 5.5]} />
         <meshStandardMaterial color="#e9e9e3" metalness={0} roughness={0.48} />
       </mesh>

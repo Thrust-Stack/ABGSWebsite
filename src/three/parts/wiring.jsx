@@ -3,20 +3,23 @@
 // Cables are modelled the way the loom is actually built rather than drawn as
 // single tubes: every run is a bundle of individual conductors that stay
 // parallel along a shared spline, arch off the deck between anchors, and land
-// on real pins (see layout.js). Signal runs keep the site's subsystem colour
-// code; the servo leads and the battery leads use their real colours, because
-// those are the ones a person would recognise.
+// on real pins (see layout.js). Power runs use their real colours, because
+// those are the ones a person would recognise; the servo signal run keeps the
+// site's actuation colour.
 //
-// The four canard servos land on channels 0-3 of the PCA9685's header field and
-// leave the sled as one loom through the base — the same way they leave the
-// real nose cone, heading aft to the servo can.
+// Scope note: the wiring *between* the six modules is not here — it is soldered
+// point-to-point on the back of the perfboard and is modelled there, on the
+// board itself (see Perfboard in boards.jsx). What this file carries is
+// everything that crosses between the two faces of the deck or leaves the sled:
+// the two power systems on the back face, the electronics supply coming round
+// the deck edge to the board, and the four canard servo leads heading aft.
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { C3 } from "../config";
+import { C3, LAYER_SPREAD, layerSpreadAt } from "../config";
 import { MM } from "./boards";
-import { at, pcaChannel, PIN_TOP, DECK_Z, DECK_Y0, channelX, deckHalf } from "./layout";
+import { at, servoPin, DECK_Z, DECK_Y0, channelX, deckHalf } from "./layout";
 import { useInteraction, PART_INDEX } from "../interaction";
 import { dataIdOf } from "../InteractivePart";
 
@@ -155,93 +158,87 @@ const overL = (y) => [-deckHalf(y) - 0.004, y, 0];
 const overR = (y) => [deckHalf(y) + 0.004, y, 0];
 
 function harness() {
-  const espL = (y) => at("esp32", -12.7, y, PIN_TOP);
-  const espR = (y) => at("esp32", 12.7, y, PIN_TOP);
-  const piGpio = (y) => at("raspberry-pi-5", 24.5, y, PIN_TOP);
+  // Power leads leave each pack's forward end, the same end the balance lead
+  // exits on the real packs.
+  const packOut = (id, x, y) => at(id, x, y, 9);
 
   return [
-    // --- I2C sensor bus: MPU6050 + BMP585 -> ESP32 (left channel) ---
-    {
-      colors: [WIRE.sense, WIRE.sense, WIRE.pos, WIRE.neg],
-      arch: 0.008,
-      points: [at("mpu6050", 0, -6.3, PIN_TOP), L(0.15), L(0.09), espL(20)],
-    },
-    {
-      colors: [WIRE.sense, WIRE.sense, WIRE.pos, WIRE.neg],
-      arch: 0.007,
-      points: [at("bmp585", 0, -6.4, PIN_TOP), L(0.09), L(0.05), espL(6)],
-    },
-    // --- GPS UART -> ESP32 (right channel) ---
-    {
-      colors: [WIRE.sense, WIRE.sense, WIRE.pos, WIRE.neg],
-      arch: 0.008,
-      points: [at("gps-v3", 0, -15.6, PIN_TOP), Rt(0.12), Rt(0.06), espR(18)],
-    },
-    // --- ESP32 -> Pi 5 link (short centre run) ---
-    {
-      colors: [WIRE.data, WIRE.data, WIRE.neg],
-      arch: 0.008,
-      spread: 0.007,
-      points: [espR(-20), [0.07, -0.14, F], [0.085, -0.18, F], piGpio(36)],
-    },
-    // --- Pi 5 SPI -> RFM95W: front to back, round the left edge ---
-    {
-      colors: [WIRE.data, WIRE.data, WIRE.data, WIRE.data, WIRE.pos, WIRE.neg],
-      arch: 0.01,
-      points: [piGpio(-20), L(-0.3), overL(0.06), L(0.13, B), at("rfm95w", 0, -9.5, PIN_TOP)],
-    },
-    // --- I2C -> PCA9685: ESP32 (front) round the right edge to the back ---
-    {
-      colors: [WIRE.act, WIRE.act, WIRE.pos, WIRE.neg],
-      arch: 0.01,
-      points: [espR(-8), Rt(-0.06), overR(-0.1), Rt(-0.12, B), at("pca9685", -6, -26, PIN_TOP)],
-    },
-    // --- battery -> BEC (both on the back face) ---
-    {
-      colors: [WIRE.pos, WIRE.neg],
-      arch: 0.008,
-      spread: 0.009,
-      r: 0.0046, // power leads are heavier gauge
-      points: [[0.02, -0.24, B - 0.02], [0.04, -0.2, B], at("bec-ubec", 18, 0, 8)],
-    },
-    // --- BEC 5 V -> Pi: back to front, round the left edge ---
+    // --- electronics pack -> its step-down converter (back face) ---
     {
       colors: [WIRE.pos, WIRE.neg],
       arch: 0.008,
       spread: 0.009,
       r: 0.0042,
-      points: [at("bec-ubec", -18, 0, 8), L(-0.2, B), overL(-0.26), L(-0.3), piGpio(-2)],
+      points: [packOut("battery-electronics", 8, 25), [0.03, -0.19, B - 0.012], at("stepdown-electronics", -8, 6, 6)],
     },
-    // --- battery -> PCA9685 V+ terminal (the servo rail is not the 5 V logic rail) ---
+    // --- electronics step-down -> switch housing (down the left channel) ---
     {
       colors: [WIRE.pos, WIRE.neg],
       arch: 0.008,
       spread: 0.009,
       r: 0.0042,
-      points: [[-0.02, -0.24, B - 0.02], L(-0.16, B), L(-0.06, B), at("pca9685", -4, 26, 8)],
+      points: [at("stepdown-electronics", 8, -6, 6), L(-0.3, B), L(-0.5, B), at("switch-housing", -13, 7, 11)],
+    },
+    // --- servo pack -> its step-down converter (back face) ---
+    {
+      colors: [WIRE.pos, WIRE.neg],
+      arch: 0.008,
+      spread: 0.01,
+      r: 0.0048, // the servo rail is the heavier of the two
+      points: [packOut("battery-servo", 10, 31), [-0.03, -0.33, B - 0.014], at("stepdown-servo", -8, -6, 6)],
+    },
+    // --- servo step-down -> switch housing (down the right channel) ---
+    {
+      colors: [WIRE.pos, WIRE.neg],
+      arch: 0.008,
+      spread: 0.01,
+      r: 0.0048,
+      points: [at("stepdown-servo", 8, 6, 6), Rt(-0.36, B), Rt(-0.52, B), at("switch-housing", 13, 7, 11)],
+    },
+    // --- switched electronics supply -> the perfboard: back to front, round
+    //     the left edge, landing on the board's aft power pads ---
+    {
+      colors: [WIRE.pos, WIRE.neg],
+      arch: 0.01,
+      spread: 0.009,
+      r: 0.0042,
+      points: [
+        at("switch-housing", -19, -2, 8),
+        L(-0.56, B),
+        overL(-0.52),
+        L(-0.5),
+        at("perfboard", -15, -78, 3),
+      ],
+    },
+    // --- canard servo signal: Main ESP32 (front) round the right edge to the
+    //     base, where it joins the servo rail on its way aft ---
+    {
+      colors: [WIRE.act, WIRE.act, WIRE.act, WIRE.act],
+      arch: 0.01,
+      spread: 0.0062,
+      points: [servoPin(1.5), Rt(-0.42), overR(-0.5), Rt(-0.54, B), at("switch-housing", 6, -9, 6)],
     },
   ];
 }
 
 /**
- * The four canard servo leads: channels 0-3 of the PCA9685 on the back face,
- * gathered into one loom and out through the base of the bay, heading aft to
- * the servo can — the same route they take on the real vehicle.
+ * The four canard servo leads. Signal comes from the Main ESP32 and the rail
+ * comes off the servo step-down, so they meet at the switch housing and leave
+ * the bay from there as one loom through the base — the same way they leave the
+ * real nose cone, heading aft to the servo can.
  */
 function servoHarness() {
   const exitY = DECK_Y0 - 0.03;
+  const j = at("switch-housing", 0, -9, 4);
   return [0, 1, 2, 3].map((i) => {
-    const ch = pcaChannel(i);
     const laneX = channelX(-0.3, 1) + (i - 1.5) * 0.008;
     return {
       colors: SERVO_LEAD,
-      arch: 0.01,
+      arch: 0.008,
       spread: 0.0072,
       points: [
-        [ch[0], ch[1], ch[2] - 0.004],
-        [ch[0] + 0.014, ch[1] - 0.02, ch[2] - 0.014],
-        [laneX, -0.3, B - 0.006],
-        [laneX, -0.5, B - 0.006],
+        [j[0] + (i - 1.5) * 0.012, j[1], j[2]],
+        [laneX * 0.7, DECK_Y0 + 0.02, B - 0.008],
         [laneX, exitY, B * 0.6],
       ],
     };
@@ -249,7 +246,7 @@ function servoHarness() {
 }
 
 export default function SledWiring() {
-  const { selectedId } = useInteraction();
+  const { selectedId, progressRef } = useInteraction();
   const group = useRef();
   const mats = useRef([]);
 
@@ -272,7 +269,11 @@ export default function SledWiring() {
       });
       mats.current = list;
     }
-    const target = hide ? 0 : 1;
+    // As the sled separates into its three layers the cables can no longer be
+    // where both ends are; ghost them back so the run is still legible as a
+    // route without pretending it still reaches its pins.
+    const spread = layerSpreadAt(progressRef.current) / LAYER_SPREAD;
+    const target = hide ? 0 : 1 - spread * 0.88;
     for (const m of mats.current) {
       m.opacity = THREE.MathUtils.damp(m.opacity, target, 8, dt);
       m.visible = m.opacity > 0.02;
@@ -297,10 +298,10 @@ export default function SledWiring() {
       })}
 
       {/* ties holding the looms into their channels along the deck edges */}
-      <ZipTie position={L(0.1, DECK_Z + 0.006)} rotation={[0, Math.PI / 2, 0]} w={0.014} />
-      <ZipTie position={Rt(0.06, DECK_Z + 0.006)} rotation={[0, Math.PI / 2, 0]} w={0.014} />
-      <ZipTie position={L(-0.3, DECK_Z + 0.006)} rotation={[0, Math.PI / 2, 0]} w={0.016} />
-      <ZipTie position={[channelX(-0.42, 1), -0.42, -(DECK_Z + 0.008)]} rotation={[0, Math.PI / 2, 0]} w={0.016} />
+      <ZipTie position={L(-0.5, DECK_Z + 0.006)} rotation={[0, Math.PI / 2, 0]} w={0.016} />
+      <ZipTie position={Rt(-0.44, DECK_Z + 0.006)} rotation={[0, Math.PI / 2, 0]} w={0.016} />
+      <ZipTie position={[channelX(-0.36, -1), -0.36, -(DECK_Z + 0.008)]} rotation={[0, Math.PI / 2, 0]} w={0.016} />
+      <ZipTie position={[channelX(-0.46, 1), -0.46, -(DECK_Z + 0.008)]} rotation={[0, Math.PI / 2, 0]} w={0.016} />
     </group>
   );
 }

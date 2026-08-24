@@ -38,7 +38,7 @@ const pinCache = new Map();
 
 /**
  * Merged pin field: `cols` × `rows` square pins on `pitch` centres.
- * One geometry, one draw call — a Pi 5's 40-pin header is 40 boxes otherwise.
+ * One geometry, one draw call — a 19-pin breakout row is 19 boxes otherwise.
  */
 export function pinFieldGeometry(cols, rows, pitch = 2.54, len = 6, thick = 0.64) {
   const key = `${cols}:${rows}:${pitch}:${len}:${thick}`;
@@ -136,61 +136,6 @@ export function Led({ color = "#ff3b30", size = 1.6, intensity = 2.4 }) {
 
 // ---- connectors -------------------------------------------------------
 
-/** Shielded connector shell (USB-A, RJ45, HDMI all share this construction). */
-function Shell({ w, d, h, color = "#b9c0c9", mouth, mouthColor = "#0b0c0f" }) {
-  return (
-    <group>
-      <mesh position={[0, 0, h / 2]}>
-        <boxGeometry args={[w, d, h]} />
-        <meshStandardMaterial color={color} metalness={1} roughness={0.32} />
-      </mesh>
-      {mouth && (
-        <mesh position={[0, -d / 2 - 0.01, h / 2]}>
-          <boxGeometry args={[mouth[0], 0.6, mouth[1]]} />
-          <meshStandardMaterial color={mouthColor} metalness={0.2} roughness={0.6} />
-        </mesh>
-      )}
-    </group>
-  );
-}
-
-/** Stacked USB-A pair. `tone` colours the insulator — blue for USB 3.0. */
-export function UsbAStack({ tone = "#12305e" }) {
-  return (
-    <group>
-      <Shell w={13.2} d={17} h={15.6} />
-      <mesh position={[0, -8.6, 4.2]}>
-        <boxGeometry args={[10.5, 0.8, 4.4]} />
-        <meshStandardMaterial color={tone} metalness={0.15} roughness={0.55} />
-      </mesh>
-      <mesh position={[0, -8.6, 11.4]}>
-        <boxGeometry args={[10.5, 0.8, 4.4]} />
-        <meshStandardMaterial color={tone} metalness={0.15} roughness={0.55} />
-      </mesh>
-    </group>
-  );
-}
-
-export function Rj45() {
-  return (
-    <group>
-      <Shell w={15.9} d={21} h={13.5} mouth={[11.5, 9]} />
-      <mesh position={[-4.4, -10.4, 11.5]}>
-        <boxGeometry args={[1.6, 0.6, 1.2]} />
-        <meshStandardMaterial color="#f0a020" emissive="#f0a020" emissiveIntensity={1.4} roughness={0.4} />
-      </mesh>
-      <mesh position={[4.4, -10.4, 11.5]}>
-        <boxGeometry args={[1.6, 0.6, 1.2]} />
-        <meshStandardMaterial color="#39d353" emissive="#39d353" emissiveIntensity={1.4} roughness={0.4} />
-      </mesh>
-    </group>
-  );
-}
-
-export function MicroHdmi() {
-  return <Shell w={7.6} d={8} h={3.2} mouth={[6.2, 2]} />;
-}
-
 export function UsbC() {
   return (
     <group>
@@ -237,7 +182,7 @@ export function StemmaQt() {
   );
 }
 
-/** Screw terminal block — the PCA9685's V+ input. */
+/** Screw terminal block — the step-down converters' and switch housing's terminals. */
 export function TerminalBlock({ ways = 2, color = "#1f4f9e" }) {
   const pitch = 5.08;
   return (
@@ -300,30 +245,7 @@ export function AntennaTrace({ w = 14, d = 6 }) {
   );
 }
 
-// ---- heatsink ---------------------------------------------------------
-const finCache = new Map();
-
-/** Merged extruded fin stack for the Pi 5 Active Cooler. */
-export function finStackGeometry(count, w, d, h, t = 0.6) {
-  const key = `${count}:${w}:${d}:${h}:${t}`;
-  const hit = finCache.get(key);
-  if (hit) return hit;
-  const parts = [];
-  const gap = w / count;
-  for (let i = 0; i < count; i++) {
-    const g = new THREE.BoxGeometry(t, d, h);
-    g.translate((i - (count - 1) / 2) * gap, 0, h / 2);
-    parts.push(g);
-  }
-  const merged = mergeGeometries(parts);
-  parts.forEach((g) => g.dispose());
-  finCache.set(key, merged);
-  return merged;
-}
-
 export function disposePrimitiveCaches() {
   for (const g of pinCache.values()) g.dispose();
   pinCache.clear();
-  for (const g of finCache.values()) g.dispose();
-  finCache.clear();
 }

@@ -159,100 +159,152 @@ function GroupLabel({ x, y, tone, children, anchor = "start" }) {
   );
 }
 
+/**
+ * Hardware architecture, power distribution, and data flow in one figure.
+ *
+ * It is laid out as the vehicle is physically laid out: everything above the
+ * divider is on the perfboard on the front of the sled, everything below it is
+ * the power system on the back. Data runs are solid and follow the subsystem
+ * colour code; power runs are dashed in the power tone and stay entirely in
+ * the lower band, so the two flows never have to be told apart by reading.
+ */
 function ArchDiagram() {
   const N = {
-    bmp585: { x: 20, y: 55, w: 120, h: 40 },
-    mpu6050: { x: 20, y: 115, w: 120, h: 40 },
-    gps: { x: 20, y: 175, w: 120, h: 40 },
-    esp32: { x: 290, y: 90, w: 140, h: 60 },
-    pi: { x: 580, y: 80, w: 170, h: 80 },
-    rfm95w: { x: 820, y: 100, w: 140, h: 40 },
-    ground: { x: 820, y: 180, w: 140, h: 40 },
-    laptop: { x: 820, y: 260, w: 140, h: 40 },
-    pca9685: { x: 290, y: 280, w: 140, h: 40 },
-    servos: { x: 500, y: 280, w: 170, h: 40 },
-    battery: { x: 20, y: 420, w: 120, h: 40 },
-    bec: { x: 290, y: 420, w: 140, h: 40 },
+    // --- front of the sled: the perfboard ---
+    mpu6500: { x: 20, y: 55, w: 125, h: 40 },
+    bmp585: { x: 20, y: 113, w: 125, h: 40 },
+    gps: { x: 20, y: 171, w: 125, h: 40 },
+    esp32: { x: 300, y: 100, w: 150, h: 66 },
+    microsd: { x: 250, y: 210, w: 140, h: 44 },
+    heltec: { x: 545, y: 105, w: 150, h: 56 },
+    ground: { x: 790, y: 105, w: 160, h: 44 },
+    laptop: { x: 790, y: 180, w: 160, h: 44 },
+    servos: { x: 545, y: 300, w: 170, h: 44 },
+    // --- back of the sled: the two power systems ---
+    battElec: { x: 20, y: 400, w: 155, h: 44 },
+    buckElec: { x: 250, y: 400, w: 175, h: 44 },
+    battServo: { x: 20, y: 480, w: 155, h: 44 },
+    buckServo: { x: 250, y: 480, w: 175, h: 44 },
+    switches: { x: 500, y: 420, w: 160, h: 84 },
+    pwrElec: { x: 735, y: 400, w: 215, h: 44 },
+    pwrServo: { x: 735, y: 480, w: 215, h: 44 },
   };
 
   const cx = (n) => n.x + n.w / 2;
   const cy = (n) => n.y + n.h / 2;
   const rx = (n) => n.x + n.w;
   const by = (n) => n.y + n.h;
-  const BL = 200;
+  const BUS = 190; // the shared sensor bus spine
+  const PWR_DASH = "2 5";
+  const RF_DASH = "6 4";
+
+  // Elbow: out along x, turn, in along y. Every power run uses one, which is
+  // what keeps the lower band orthogonal and readable.
+  const elbow = (x1, y1, x2, y2, turn) =>
+    `${x1},${y1} ${turn},${y1} ${turn},${y2} ${x2},${y2}`;
 
   return (
-    <svg viewBox="0 0 980 500" style={{ width: "100%", minWidth: "800px", display: "block" }}>
-      {/* Sensors → bus → ESP32 */}
-      <line x1={rx(N.bmp585)} y1={cy(N.bmp585)} x2={BL} y2={cy(N.bmp585)} stroke={SENSE} strokeOpacity="0.25" strokeWidth="1" />
-      <line x1={rx(N.mpu6050)} y1={cy(N.mpu6050)} x2={BL} y2={cy(N.mpu6050)} stroke={SENSE} strokeOpacity="0.25" strokeWidth="1" />
-      <line x1={rx(N.gps)} y1={cy(N.gps)} x2={BL} y2={cy(N.gps)} stroke={SENSE} strokeOpacity="0.25" strokeWidth="1" />
-      <line x1={BL} y1={cy(N.bmp585)} x2={BL} y2={cy(N.gps)} stroke={SENSE} strokeOpacity="0.15" strokeWidth="2" />
-      <circle cx={BL} cy={cy(N.bmp585)} r="3" fill={SENSE} fillOpacity="0.5" />
-      <circle cx={BL} cy={cy(N.mpu6050)} r="3" fill={SENSE} fillOpacity="0.5" />
-      <circle cx={BL} cy={cy(N.gps)} r="3" fill={SENSE} fillOpacity="0.5" />
-      <line x1={BL} y1={cy(N.esp32)} x2={N.esp32.x} y2={cy(N.esp32)} stroke={SENSE} strokeOpacity="0.4" strokeWidth="1.5" />
+    <svg
+      viewBox="0 0 980 560"
+      role="img"
+      aria-label="Avionics architecture: the six perfboard modules on the front of the sled feeding the Main ESP32, which logs to the MicroSD reader, drives four canard servos, and passes telemetry to the Heltec ESP32 for downlink; below, two separate battery and step-down systems meeting at the switch housing on the back of the sled."
+      style={{ width: "100%", minWidth: "820px", display: "block" }}
+    >
+      {/* ---- sensors -> shared bus -> Main ESP32 ---- */}
+      {[N.mpu6500, N.bmp585, N.gps].map((n, i) => (
+        <g key={i}>
+          <line x1={rx(n)} y1={cy(n)} x2={BUS} y2={cy(n)} stroke={SENSE} strokeOpacity="0.3" strokeWidth="1.2" />
+          <circle cx={BUS} cy={cy(n)} r="3" fill={SENSE} fillOpacity="0.55" />
+        </g>
+      ))}
+      <line x1={BUS} y1={cy(N.mpu6500)} x2={BUS} y2={cy(N.gps)} stroke={SENSE} strokeOpacity="0.18" strokeWidth="2.5" />
+      <line x1={BUS} y1={cy(N.esp32)} x2={N.esp32.x} y2={cy(N.esp32)} stroke={SENSE} strokeOpacity="0.45" strokeWidth="1.6" />
       <Arrow x={N.esp32.x} y={cy(N.esp32)} dir="right" tone={SENSE} />
 
-      {/* ESP32 ↔ Pi */}
-      <line x1={rx(N.esp32)} y1={cy(N.esp32)} x2={N.pi.x} y2={cy(N.pi)} stroke={PROC} strokeOpacity="0.4" strokeWidth="1.5" />
-      <Arrow x={rx(N.esp32) + 8} y={cy(N.esp32)} dir="right" tone={PROC} />
-      <Arrow x={N.pi.x - 8} y={cy(N.pi)} dir="left" tone={PROC} />
+      {/* ---- Main ESP32 -> MicroSD reader (logging) ---- */}
+      <line x1={320} y1={by(N.esp32)} x2={320} y2={N.microsd.y} stroke={PROC} strokeOpacity="0.4" strokeWidth="1.6" />
+      <Arrow x={320} y={N.microsd.y} dir="down" tone={PROC} />
 
-      {/* Pi → RFM95W → Ground → Laptop */}
-      <line x1={rx(N.pi)} y1={cy(N.pi)} x2={N.rfm95w.x} y2={cy(N.rfm95w)} stroke={PROC} strokeOpacity="0.4" strokeWidth="1.5" />
-      <Arrow x={N.rfm95w.x} y={cy(N.rfm95w)} dir="right" tone={PROC} />
-      <line x1={cx(N.rfm95w)} y1={by(N.rfm95w)} x2={cx(N.ground)} y2={N.ground.y} stroke={RF} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="5 3" />
-      <Arrow x={cx(N.ground)} y={N.ground.y} dir="down" tone={RF} />
-      <line x1={cx(N.ground)} y1={by(N.ground)} x2={cx(N.laptop)} y2={N.laptop.y} stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-      <Arrow x={cx(N.laptop)} y={N.laptop.y} dir="down" tone="rgba(255,255,255,0.4)" />
-
-      {/* ESP32 → PCA9685 → Servos */}
-      <line x1={cx(N.esp32)} y1={by(N.esp32)} x2={cx(N.esp32)} y2={N.pca9685.y} stroke={ACT} strokeOpacity="0.35" strokeWidth="1.5" />
-      <Arrow x={cx(N.esp32)} y={N.pca9685.y} dir="down" tone={ACT} />
-      <line x1={rx(N.pca9685)} y1={cy(N.pca9685)} x2={N.servos.x} y2={cy(N.servos)} stroke={ACT} strokeOpacity="0.35" strokeWidth="1.5" />
+      {/* ---- Main ESP32 -> canard servos ---- */}
+      <polyline
+        points={elbow(430, by(N.esp32), N.servos.x, cy(N.servos), 430)}
+        fill="none"
+        stroke={ACT}
+        strokeOpacity="0.4"
+        strokeWidth="1.6"
+      />
       <Arrow x={N.servos.x} y={cy(N.servos)} dir="right" tone={ACT} />
 
-      {/* Power */}
-      <line x1={rx(N.battery)} y1={cy(N.battery)} x2={N.bec.x} y2={cy(N.bec)} stroke={PWR} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
-      <Arrow x={N.bec.x} y={cy(N.bec)} dir="right" tone={PWR} />
-      <line x1={rx(N.bec)} y1={cy(N.bec)} x2={cx(N.pi)} y2={cy(N.bec)} stroke={PWR} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
-      <line x1={cx(N.pi)} y1={cy(N.bec)} x2={cx(N.pi)} y2={by(N.pi)} stroke={PWR} strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="2 4" />
-      <Arrow x={cx(N.pi)} y={by(N.pi)} dir="up" tone={PWR} />
+      {/* ---- Main ESP32 -> Heltec -> ground station -> laptop ---- */}
+      <line x1={rx(N.esp32)} y1={cy(N.esp32)} x2={N.heltec.x} y2={cy(N.heltec)} stroke={PROC} strokeOpacity="0.45" strokeWidth="1.6" />
+      <Arrow x={N.heltec.x} y={cy(N.heltec)} dir="right" tone={PROC} />
+      <line x1={rx(N.heltec)} y1={cy(N.heltec)} x2={N.ground.x} y2={cy(N.ground)} stroke={RF} strokeOpacity="0.45" strokeWidth="1.6" strokeDasharray={RF_DASH} />
+      <Arrow x={N.ground.x} y={cy(N.ground)} dir="right" tone={RF} />
+      <line x1={cx(N.ground)} y1={by(N.ground)} x2={cx(N.laptop)} y2={N.laptop.y} stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+      <Arrow x={cx(N.laptop)} y={N.laptop.y} dir="down" tone="rgba(255,255,255,0.45)" />
 
-      {/* Protocol labels */}
-      <ProtoTag x={160} y={cy(N.bmp585) - 9} text="I2C" tone={SENSE} />
-      <ProtoTag x={160} y={cy(N.mpu6050) - 9} text="I2C" tone={SENSE} />
-      <ProtoTag x={160} y={cy(N.gps) - 9} text="UART" tone={SENSE} />
-      <ProtoTag x={(rx(N.esp32) + N.pi.x) / 2} y={cy(N.esp32) - 9} text="UART" tone={PROC} />
-      <ProtoTag x={(rx(N.pi) + N.rfm95w.x) / 2} y={cy(N.pi) - 9} text="SPI" tone={PROC} />
-      <ProtoTag x={cx(N.rfm95w) + 32} y={(by(N.rfm95w) + N.ground.y) / 2} text="915MHz" tone={RF} />
-      <ProtoTag x={cx(N.ground) + 28} y={(by(N.ground) + N.laptop.y) / 2} text="USB" tone="rgba(255,255,255,0.4)" />
-      <ProtoTag x={cx(N.esp32) + 26} y={(by(N.esp32) + N.pca9685.y) / 2} text="I2C" tone={ACT} />
-      <ProtoTag x={(rx(N.pca9685) + N.servos.x) / 2} y={cy(N.pca9685) - 9} text="PWM ×4" tone={ACT} />
-      <ProtoTag x={(rx(N.battery) + N.bec.x) / 2} y={cy(N.battery) - 9} text="7.4V" tone={PWR} />
-      <ProtoTag x={cx(N.pi) + 30} y={(cy(N.bec) + by(N.pi)) / 2} text="5V" tone={PWR} />
+      {/* ---- the divider: front of the sled above, back of the sled below ---- */}
+      <line x1={20} y1={365} x2={950} y2={365} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="3 6" />
 
-      {/* Section labels */}
-      <GroupLabel x={20} y={32} tone={SENSE}>SENSOR INPUTS</GroupLabel>
-      <GroupLabel x={290} y={32} tone={PROC}>PROCESSING / CONTROL</GroupLabel>
-      <GroupLabel x={890} y={70} tone={PROC} anchor="middle">TELEMETRY / GROUND STN</GroupLabel>
-      <GroupLabel x={360} y={267} tone={ACT} anchor="middle">ACTUATOR OUTPUTS</GroupLabel>
-      <GroupLabel x={205} y={407} tone={PWR} anchor="middle">POWER SYSTEM</GroupLabel>
+      {/* ---- power: pack -> its own converter -> switch housing -> load ---- */}
+      {[
+        { b: N.battElec, k: N.buckElec, turn: 462, sy: 440 },
+        { b: N.battServo, k: N.buckServo, turn: 462, sy: 484 },
+      ].map(({ b, k, turn, sy }, i) => (
+        <g key={i}>
+          <line x1={rx(b)} y1={cy(b)} x2={k.x} y2={cy(k)} stroke={PWR} strokeOpacity="0.45" strokeWidth="1.6" strokeDasharray={PWR_DASH} />
+          <Arrow x={k.x} y={cy(k)} dir="right" tone={PWR} />
+          <polyline points={elbow(rx(k), cy(k), N.switches.x, sy, turn)} fill="none" stroke={PWR} strokeOpacity="0.45" strokeWidth="1.6" strokeDasharray={PWR_DASH} />
+          <Arrow x={N.switches.x} y={sy} dir="right" tone={PWR} />
+        </g>
+      ))}
+      {[
+        { t: N.pwrElec, sy: 440 },
+        { t: N.pwrServo, sy: 484 },
+      ].map(({ t, sy }, i) => (
+        <g key={i}>
+          <polyline points={elbow(rx(N.switches), sy, t.x, cy(t), 700)} fill="none" stroke={PWR} strokeOpacity="0.45" strokeWidth="1.6" strokeDasharray={PWR_DASH} />
+          <Arrow x={t.x} y={cy(t)} dir="right" tone={PWR} />
+        </g>
+      ))}
 
-      {/* Nodes */}
+      {/* ---- protocol labels ---- */}
+      <ProtoTag x={162} y={cy(N.mpu6500) - 9} text="I2C" tone={SENSE} />
+      <ProtoTag x={162} y={cy(N.bmp585) - 9} text="I2C" tone={SENSE} />
+      <ProtoTag x={162} y={cy(N.gps) - 9} text="UART" tone={SENSE} />
+      <ProtoTag x={346} y={188} text="SPI" tone={PROC} />
+      <ProtoTag x={(rx(N.esp32) + N.heltec.x) / 2} y={cy(N.esp32) - 9} text="UART" tone={PROC} />
+      <ProtoTag x={(rx(N.heltec) + N.ground.x) / 2} y={cy(N.heltec) - 9} text="RF" tone={RF} />
+      <ProtoTag x={cx(N.ground) + 26} y={(by(N.ground) + N.laptop.y) / 2} text="USB" tone="rgba(255,255,255,0.45)" />
+      <ProtoTag x={490} y={cy(N.servos) - 9} text="PWM ×4" tone={ACT} />
+      <ProtoTag x={(rx(N.battElec) + N.buckElec.x) / 2} y={cy(N.battElec) - 9} text="7.4V" tone={PWR} />
+      <ProtoTag x={(rx(N.battServo) + N.buckServo.x) / 2} y={cy(N.battServo) - 9} text="8.4V" tone={PWR} />
+
+      {/* ---- section labels ---- */}
+      <GroupLabel x={20} y={32} tone={SENSE}>SENSING</GroupLabel>
+      <GroupLabel x={250} y={82} tone={PROC}>CONTROL + STORAGE</GroupLabel>
+      <GroupLabel x={870} y={88} tone={RF} anchor="middle">TELEMETRY / GROUND STN</GroupLabel>
+      <GroupLabel x={630} y={288} tone={ACT} anchor="middle">ACTUATION</GroupLabel>
+      <GroupLabel x={950} y={32} tone="rgba(255,255,255,0.4)" anchor="end">FRONT OF SLED / PERFBOARD</GroupLabel>
+      <GroupLabel x={20} y={388} tone={PWR}>BACK OF SLED / POWER</GroupLabel>
+
+      {/* ---- nodes ---- */}
+      <ArchNode {...N.mpu6500} label="MPU6500" sub="IMU" tone={SENSE} />
       <ArchNode {...N.bmp585} label="BMP585" sub="ALTIMETER" tone={SENSE} />
-      <ArchNode {...N.mpu6050} label="MPU6050" sub="IMU" tone={SENSE} />
-      <ArchNode {...N.gps} label="GPS V3" sub="POSITION" tone={SENSE} />
-      <ArchNode {...N.esp32} label="ESP32" sub="SENSOR/SERVO COMM" tone={PROC} />
-      <ArchNode {...N.pi} label="Raspberry Pi 5" sub="FLIGHT COMPUTER" tone={PROC} />
-      <ArchNode {...N.rfm95w} label="RFM95W" sub="915MHz RADIO" tone={RF} />
+      <ArchNode {...N.gps} label="GPS Module" sub="POSITION" tone={SENSE} />
+      <ArchNode {...N.esp32} label="Main ESP32" sub="FLIGHT CONTROLLER" tone={PROC} />
+      <ArchNode {...N.microsd} label="MicroSD Reader" sub="ONBOARD LOG" tone={PROC} />
+      <ArchNode {...N.heltec} label="Heltec ESP32" sub="TELEMETRY TX" tone={RF} />
       <ArchNode {...N.ground} label="Ground Stn" sub="RECEIVER" tone="rgba(255,255,255,0.45)" />
       <ArchNode {...N.laptop} label="Laptop" sub="DASHBOARD" tone="rgba(255,255,255,0.45)" />
-      <ArchNode {...N.pca9685} label="PCA9685" sub="SERVO DRIVER" tone={ACT} />
       <ArchNode {...N.servos} label="Servos ×4" sub="BMS-127WV+" tone={ACT} />
-      <ArchNode {...N.battery} label="Battery" sub="7.4V SRC" tone={PWR} />
-      <ArchNode {...N.bec} label="BEC UBEC" sub="5V STEP-DOWN" tone={PWR} />
+      <ArchNode {...N.battElec} label="7.4V 2S LiPo" sub="ELECTRONICS" tone={PWR} />
+      <ArchNode {...N.buckElec} label="Step-Down" sub="ELECTRONICS" tone={PWR} />
+      <ArchNode {...N.battServo} label="8.4V 2S LiPo" sub="SERVO" tone={PWR} />
+      <ArchNode {...N.buckServo} label="Step-Down" sub="SERVO" tone={PWR} />
+      <ArchNode {...N.switches} label="Switch Housing" sub="ARM / SAFE" tone={PWR} />
+      <ArchNode {...N.pwrElec} label="Main + Heltec ESP32" sub="ELECTRONICS RAIL" tone={PROC} />
+      <ArchNode {...N.pwrServo} label="Four Servos" sub="SERVO RAIL" tone={ACT} />
     </svg>
   );
 }
@@ -369,10 +421,11 @@ export default function Telemetry() {
             <Kicker>SYSTEM OVERVIEW</Kicker>
             <SectionTitle>Data Architecture</SectionTitle>
             <Lead>
-              The BMP585, MPU6050, and GPS feed sensor data to the ESP32, which exchanges
-              telemetry with the Raspberry Pi 5 and drives the PCA9685 to actuate the
-              canard servos. The Pi downlinks flight data over 915 MHz LoRa to the ground
-              station, while a separate 7.4 V → 5 V rail powers the flight computer.
+              The MPU6500, BMP585, and GPS all sit on the perfboard and feed the Main ESP32,
+              which logs every sample through the MicroSD reader, drives the four canard
+              servos, and hands telemetry frames to the Heltec ESP32 for downlink to the
+              ground station. Behind the sled, two batteries run two separate power systems:
+              each has its own step-down converter, and both are switched at the housing.
             </Lead>
           </Reveal>
 
@@ -393,15 +446,15 @@ export default function Telemetry() {
 
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 20, justifyContent: "center" }}>
             {[
-              { label: "SENSOR BUS", tone: SENSE },
-              { label: "PROCESSING", tone: PROC },
+              { label: "SENSOR DATA", tone: SENSE },
+              { label: "CONTROL / STORAGE", tone: PROC },
               { label: "ACTUATION", tone: ACT },
-              { label: "915MHz RF", tone: RF, dashed: true },
-              { label: "POWER RAIL", tone: PWR, dashed: true },
-            ].map(({ label, tone, dashed }) => (
+              { label: "RF DOWNLINK", tone: RF, dash: "6 4" },
+              { label: "POWER", tone: PWR, dash: "2 5" },
+            ].map(({ label, tone, dash }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <svg width="28" height="10">
-                  <line x1="0" y1="5" x2="28" y2="5" stroke={tone} strokeWidth="1.5" strokeOpacity="0.7" strokeDasharray={dashed ? "4 2" : undefined} />
+                  <line x1="0" y1="5" x2="28" y2="5" stroke={tone} strokeWidth="1.5" strokeOpacity="0.7" strokeDasharray={dash} />
                 </svg>
                 <span style={{ fontFamily: font.mono, fontSize: 10, color: color.textFaint, letterSpacing: "0.14em" }}>{label}</span>
               </div>

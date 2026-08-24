@@ -5,38 +5,41 @@ import { Button } from "../design/primitives";
 import { dataFlow } from "../data/project";
 
 // Protocol -> tone, so the data-path table colour-codes by bus the same way the
-// telemetry architecture diagram does.
+// telemetry architecture diagram does. Every key here is a protocol that
+// actually appears in `dataFlow`; power hops fall through to the metal tone and
+// are additionally marked as power by the arrow, so the two flows stay
+// distinguishable without relying on colour alone.
 const PROTO_TONE = {
   I2C: "green",
   UART: "green",
   SPI: "blue",
   PWM: "orange",
-  "915MHz": "orange",
+  RF: "orange",
   USB: "metal",
-  PWR: "metal",
-  "5V PWR": "metal",
 };
 
-// The three compute tiers and what each one is actually responsible for. This is
-// the software side of the same hardware the Hardware page and the 3D sled show.
+// The three software tiers and what each one is actually responsible for. This is
+// the software side of the same hardware the Hardware page and the 3D sled show:
+// one controller on the perfboard doing the flight loop, one transmitter beside
+// it doing the downlink, and the laptop on the ground.
 const TIERS = [
   {
-    id: "esp32",
-    tier: "TIER 1 · REAL-TIME I/O",
+    id: "esp32-main",
+    tier: "TIER 1 · FLIGHT CONTROLLER",
     tone: color.blue,
-    name: "ESP32 Firmware",
-    role: "Sensor acquisition & servo output",
-    body: "Bare-metal C++ on the ESP32's two cores. One loop polls the MPU6050 and BMP585 on the shared I2C bus and reads NMEA sentences from the GPS over UART, timestamping every sample so nothing downstream has to guess when it was taken. Samples are framed and streamed up to the Pi over a second UART at a steady 100 Hz. On the return path it receives the four canard angles the Pi computed and writes them to the PCA9685 over I2C, which latches the hardware-timed PWM the servos actually follow.",
-    tags: ["I2C poll", "UART bridge", "100 Hz", "PCA9685 PWM"],
+    name: "Main ESP32 Firmware",
+    role: "Acquisition · control · logging",
+    body: "Bare-metal C++ on the Main ESP32's two cores. One loop polls the MPU6500 and BMP585 on the shared I2C bus and reads NMEA sentences from the GPS over UART, timestamping every sample so nothing downstream has to guess when it was taken. The same board fuses those samples into an attitude estimate, runs the control loop, and drives the four canard servos directly as PWM — with the separate flight computer and PWM driver gone, acquisition and control are one program on one board. Every sample is written through the MicroSD reader over SPI as it is taken, and finished telemetry frames go out to the Heltec over UART.",
+    tags: ["I2C poll", "PID @ 100 Hz", "SPI logging", "Direct servo PWM"],
   },
   {
-    id: "raspberry-pi-5",
-    tier: "TIER 2 · FLIGHT COMPUTER",
+    id: "heltec-esp32",
+    tier: "TIER 2 · TELEMETRY",
     tone: color.green,
-    name: "Pi 5 Flight Software",
-    role: "Fusion · control · telemetry",
-    body: "The brain. It fuses the incoming IMU, barometer, and GPS into a single attitude-and-altitude state estimate, runs the PID control loop that turns the error between that estimate and the planned attitude into four canard commands, and packs a telemetry frame every cycle. Commands go back down to the ESP32 over UART; telemetry goes out to the RFM95W over SPI for the 915 MHz downlink. Everything runs at the same 100 Hz the sensors stream at, and every frame is logged to disk for post-flight review.",
-    tags: ["Sensor fusion", "PID @ 100 Hz", "Frame packing", "SPI downlink"],
+    name: "Heltec Transmitter Firmware",
+    role: "Frame · transmit · downlink",
+    body: "The Heltec ESP32 sits on the same perfboard and does one job. It takes finished frames from the Main ESP32 over the serial link, hands them to the radio on its own module, and downlinks them to the ground station. Keeping it on a second controller means the transmit path can never stall the control loop: if the link is slow or the ground station drops out, the flight loop and the onboard log carry on untouched.",
+    tags: ["Serial ingest", "Frame TX", "Long-range radio", "Loop isolation"],
   },
   {
     id: "ground-station",
@@ -44,8 +47,8 @@ const TIERS = [
     tone: color.orange,
     name: "Ground Station",
     role: "Receive · decode · display",
-    body: "A laptop-side receiver reads the RFM95W ground module over USB, decodes each binary telemetry frame back into altitude, velocity, orientation, and GPS position, and plots it live so the flight can be watched as it happens. Every frame is also written to a log so the commanded canard angles can be compared against the logged attitude afterward. The Telemetry page is a browser stand-in for exactly this display.",
-    tags: ["LoRa RX", "Frame decode", "Live plot", "Flight log"],
+    body: "A laptop-side receiver reads the ground radio module over USB, decodes each binary telemetry frame back into altitude, velocity, orientation, and GPS position, and plots it live so the flight can be watched as it happens. Every frame is also written to a log so the commanded canard angles can be compared against the attitude recorded on the vehicle's own card afterward. The Telemetry page is a browser stand-in for exactly this display.",
+    tags: ["Radio RX", "Frame decode", "Live plot", "Flight log"],
   },
 ];
 
@@ -54,7 +57,7 @@ const LOOP = [
   { n: "01", label: "Estimate", text: "Gyro rates are integrated for a fast attitude estimate, then corrected against the accelerometer's gravity vector and the barometer's altitude so the estimate can't drift over a flight." },
   { n: "02", label: "Compare", text: "The fused attitude is subtracted from the planned attitude to get the pitch, yaw, and roll error — how far off the vehicle is from where it should be pointed right now." },
   { n: "03", label: "Correct", text: "A PID controller turns each error into a correction: proportional to the error now, integral of what's accumulated, and derivative of how fast it's changing, tuned so the vehicle settles without oscillating." },
-  { n: "04", label: "Actuate", text: "The corrections are mixed into four individual canard angles and sent down through the ESP32 to the PCA9685, which drives the servos. The next sensor sample closes the loop, 100 times a second." },
+  { n: "04", label: "Actuate", text: "The corrections are mixed into four individual canard angles and driven straight out of the Main ESP32 as PWM to the four servos. The next sensor sample closes the loop, 100 times a second." },
 ];
 
 function TierCard({ t }) {
@@ -89,8 +92,9 @@ export default function Software() {
           <Kicker tone="blue">FLIGHT SOFTWARE</Kicker>
           <SectionTitle>How the Code Flies It</SectionTitle>
           <Lead>
-            The hardware is nine boards; the software is what makes them a control system. It runs
-            on three tiers — real-time firmware on the ESP32, the flight loop on the Raspberry Pi 5,
+            The hardware is one perfboard and two power systems; the software is what makes them a
+            control system. It runs
+            on three tiers — the flight loop on the Main ESP32, the downlink on the Heltec,
             and a ground station on a laptop — each talking to the next over the exact buses the
             wiring lays down.
           </Lead>
@@ -139,7 +143,7 @@ export default function Software() {
             <Kicker tone="green">THE CONTROL LOOP</Kicker>
             <SectionTitle style={{ fontSize: "clamp(24px, 3.5vw, 34px)" }}>Estimate, Compare, Correct</SectionTitle>
             <Lead>
-              The whole point of the stack is one loop running a hundred times a second on the Pi.
+              The whole point of the stack is one loop running a hundred times a second on the Main ESP32.
               It reads where the rocket is pointed, works out how far that is from where it should be,
               and trims the canards to close the gap.
             </Lead>
@@ -174,9 +178,10 @@ export default function Software() {
             <Kicker tone="orange">DATA PATH</Kicker>
             <SectionTitle style={{ fontSize: "clamp(24px, 3.5vw, 34px)" }}>Every Hop, Every Bus</SectionTitle>
             <Lead>
-              Software only matters if the bytes actually move. This is the same signal path the
-              wiring builds, from a raw sensor read on the ESP32 all the way to a pixel on the ground
-              station — each hop with the bus it rides.
+              Software only matters if the bytes actually move. This is the same path the wiring
+              builds, from a raw sensor read on the Main ESP32 all the way to a pixel on the ground
+              station — each hop with the bus it rides. The last four hops are power rather than
+              data, and carry a doubled arrow to say so.
             </Lead>
           </Reveal>
 
@@ -191,6 +196,10 @@ export default function Software() {
             >
               {dataFlow.map((hop, i) => {
                 const tone = PROTO_TONE[hop.protocol] || "metal";
+                // Power hops get a doubled arrow so the table reads correctly
+                // in greyscale and for anyone who can't separate the tones.
+                const power = hop.kind === "power";
+                const arrow = power ? "⇒" : "→";
                 return (
                   <div
                     key={`${hop.from}-${hop.to}`}
@@ -208,12 +217,16 @@ export default function Software() {
                       {hop.from}
                     </span>
                     {!isMobile && (
-                      <span aria-hidden style={{ fontFamily: font.mono, fontSize: 13, color: color.textGhost, textAlign: "center" }}>
-                        →
+                      <span
+                        aria-label={power ? "powers" : "sends data to"}
+                        role="img"
+                        style={{ fontFamily: font.mono, fontSize: 13, color: color.textGhost, textAlign: "center" }}
+                      >
+                        {arrow}
                       </span>
                     )}
                     <span style={{ fontFamily: font.mono, fontSize: isMobile ? 12 : 13, color: isMobile ? color.textDim : color.text, letterSpacing: "0.02em" }}>
-                      {isMobile && <span style={{ color: color.textGhost, marginRight: 6 }}>→</span>}
+                      {isMobile && <span style={{ color: color.textGhost, marginRight: 6 }}>{arrow}</span>}
                       {hop.to}
                     </span>
                     <Tag tone={tone}>{hop.protocol}</Tag>
@@ -226,9 +239,9 @@ export default function Software() {
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 20, justifyContent: "center" }}>
             {[
               { label: "SENSOR BUS", tone: color.green },
-              { label: "PROCESSING", tone: color.blue },
+              { label: "STORAGE", tone: color.blue },
               { label: "ACTUATION / RF", tone: color.orange },
-              { label: "POWER", tone: color.metal },
+              { label: "POWER (⇒)", tone: color.metal },
             ].map(({ label, tone }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 2, background: tone, opacity: 0.85 }} />
