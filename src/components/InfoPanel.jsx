@@ -6,8 +6,7 @@ import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { color, font, radius, z } from "../design/tokens";
 import { useIsMobile } from "../design/primitives";
-import { useInteraction, PART_INDEX } from "../three/interaction";
-import { dataIdOf } from "../three/InteractivePart";
+import { dataIdOf, useInteraction, PART_INDEX } from "../three/interaction";
 
 const TONE = {
   blue: color.blue,

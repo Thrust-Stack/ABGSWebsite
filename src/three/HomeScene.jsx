@@ -1,6 +1,6 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Preload } from "@react-three/drei";
+import { ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import RocketModel from "./RocketModel";
 import RotationController from "./RotationController";
@@ -17,6 +17,26 @@ const PHASE_ORDER = ["hero", "overview", "canards", "explode", "sledOut", "inspe
 const _pos = new THREE.Vector3();
 const _look = new THREE.Vector3();
 const _curLook = new THREE.Vector3(0, 0.55, 0);
+
+function useDeferredPostProcessing(enabled) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let idleId;
+    const delayId = window.setTimeout(() => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(() => setReady(true), { timeout: 1800 });
+      } else {
+        setReady(true);
+      }
+    }, 1200);
+    return () => {
+      window.clearTimeout(delayId);
+      if (idleId) window.cancelIdleCallback(idleId);
+    };
+  }, [enabled]);
+  return ready;
+}
 
 function CameraRig({ reduced, isTouch }) {
   const { progressRef, selectedId, dragging } = useInteraction();
@@ -80,7 +100,8 @@ function CameraRig({ reduced, isTouch }) {
 }
 
 export default function HomeScene({ perfTier, reduced, isTouch }) {
-  const dpr = perfTier === 2 ? [1, 2] : perfTier === 1 ? [1, 1.5] : 1;
+  const dpr = perfTier === 2 ? [1, 1.5] : perfTier === 1 ? [1, 1.25] : 1;
+  const postReady = useDeferredPostProcessing(perfTier === 2);
 
   return (
     <Canvas
@@ -146,15 +167,11 @@ export default function HomeScene({ perfTier, reduced, isTouch }) {
             blur={2.6}
             opacity={0.5}
             far={6}
-            frames={reduced ? 1 : Infinity}
+            frames={1}
           />
         )}
-        {/* Compile every material and upload every texture during the loading
-            Suspense, so the first time a board scrolls into view or is pulled
-            out there's no shader-compile hitch. */}
-        <Preload all />
       </Suspense>
-      {perfTier === 2 && (
+      {postReady && (
         <Suspense fallback={null}>
           <Post />
         </Suspense>

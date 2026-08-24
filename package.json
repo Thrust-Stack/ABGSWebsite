@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview",
     "convert:cad": "node scripts/convert-cad.mjs",
     "build:logo": "node scripts/make-logo-mark.mjs"

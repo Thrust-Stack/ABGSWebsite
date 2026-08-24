@@ -11,11 +11,9 @@ import { useRef, useEffect, useMemo, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { useInteraction, PART_INDEX } from "./interaction";
+import { dataIdOf, useInteraction, PART_INDEX } from "./interaction";
 import { C3, stageFadeAt } from "./config";
 import { color as uiColor, font } from "../design/tokens";
-
-export const dataIdOf = (instanceId) => (instanceId ? instanceId.split("#")[0] : null);
 
 const TONE3 = {
   blue: C3.blue,

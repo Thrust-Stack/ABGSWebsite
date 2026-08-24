@@ -1,7 +1,7 @@
 // Scroll-driven 3D homepage. A sticky full-viewport canvas renders the
 // rocket while overlay content sections scroll past, mapped to the same
 // phase timeline that drives the camera and the exploded view.
-import { useRef, useCallback, useEffect } from "react";
+import { lazy, Suspense, useRef, useCallback, useEffect } from "react";
 import { motion, useScroll, useTransform, useMotionValueEvent } from "motion/react";
 import { color, font, ease, radius, MAXW } from "../design/tokens";
 import { Kicker, Button, useIsMobile } from "../design/primitives";
@@ -9,9 +9,10 @@ import { Reveal } from "../design/motion";
 import { TAGLINE, PROJECT_LABEL, MISSION_STATEMENT, components } from "../data/project";
 import { InteractionProvider, useInteraction } from "../three/interaction";
 import { useWebGLSupport, usePerfTier, usePrefersReducedMotion, useIsTouch } from "../three/hooks";
-import { PHASES, SCROLL_VH_DESKTOP, SCROLL_VH_MOBILE } from "../three/config";
-import HomeScene from "../three/HomeScene";
+import { PHASES, SCROLL_VH_DESKTOP, SCROLL_VH_MOBILE } from "./homeTimeline";
 import InfoPanel from "../components/InfoPanel";
+
+const HomeScene = lazy(() => import("../three/HomeScene"));
 
 const TONE = { blue: color.blue, orange: color.orange, green: color.green, metal: color.metal };
 
@@ -455,7 +456,9 @@ function HomeExperience() {
     <div ref={containerRef} style={{ position: "relative", height: `${scrollVh}vh` }}>
       {/* sticky 3D stage */}
       <div style={{ position: "sticky", top: 0, height: "100vh", overflow: "hidden", zIndex: 1 }}>
-        <HomeScene perfTier={perfTier} reduced={reduced} isTouch={isTouch} />
+        <Suspense fallback={null}>
+          <HomeScene perfTier={perfTier} reduced={reduced} isTouch={isTouch} />
+        </Suspense>
       </div>
 
       {/* skip affordance */}

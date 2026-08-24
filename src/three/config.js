@@ -7,6 +7,10 @@
 // Ø79 mm; the avionics sled rides inside the nose cone — see the team's
 // build photos).
 
+import { PHASES } from "../pages/homeTimeline";
+import { SLED_PRESENT_YAW } from "./interactionMath";
+export { PHASES, SCROLL_VH_DESKTOP, SCROLL_VH_MOBILE } from "../pages/homeTimeline";
+
 export const LENGTH = 7.6; // rocket length in scene units
 const MM = LENGTH / 1052.0; // mm -> scene units
 export const MM_TO_UNIT = MM;
@@ -79,18 +83,7 @@ export const SLED = {
   presentPos: [0.38, 0.37, 2.45],
   // Turned off face-on while inspected: the bay is a 1:4.9 sliver, and a
   // three-quarter view is what gives it depth instead of reading as a decal.
-  presentYaw: -0.36,
-};
-
-// ---- Scroll phase map (progress 0..1 across the whole home scroll) ----
-export const PHASES = {
-  hero: { start: 0.0, end: 0.12 },
-  overview: { start: 0.12, end: 0.26 },
-  canards: { start: 0.26, end: 0.44 },
-  explode: { start: 0.44, end: 0.58 },
-  sledOut: { start: 0.58, end: 0.7 },
-  inspect: { start: 0.7, end: 0.88 },
-  outro: { start: 0.88, end: 1.0 },
+  presentYaw: SLED_PRESENT_YAW,
 };
 
 export const phaseT = (p, phase) => {
@@ -179,13 +172,6 @@ export const launchAt = (outroT) => {
 // True from just before the outro phase onward. Everything ignition-related is
 // gated on this so it costs nothing across the other 88% of the scroll.
 export const outroArmed = (p) => p > PHASES.outro.start - 0.02;
-
-// Height of the scroll track that drives the 3D tour (progress 0..1 maps across
-// this). The YouTube video section in Home.jsx is appended *after* this track as
-// a normal content block, so it adds its own scroll room at the end without
-// remapping the phase timeline above. Bump these only to change 3D-tour pacing.
-export const SCROLL_VH_DESKTOP = 850;
-export const SCROLL_VH_MOBILE = 700;
 
 // Camera keyframes per phase: [position], [lookAt].
 // The rig dwells at each key and blends to the next only late in the phase.
